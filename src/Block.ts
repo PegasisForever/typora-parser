@@ -33,6 +33,26 @@ export class ParagraphBlock extends Block {
   }
 }
 
+export class DividerBlock extends Block {
+  private static regex = /^ {0,3}((\*[ \t]*){3,}|(-[ \t]*){3,}|(_[ \t]*){3,})$/
+
+  static match(lines: string[]): BlockMatchResult {
+    if (lines.length >= 2 && lines[1] === '' && lines[0].match(this.regex)) {
+      const divider = new DividerBlock()
+      divider.lines.push(lines[0])
+      divider.isOpen = false
+      return [divider, lines.slice(2)]
+    } else {
+      return null
+    }
+  }
+
+  append(lines: string[]): string[] | null {
+    return null
+  }
+}
+
 export const blockTypes = [
+  DividerBlock,
   ParagraphBlock,
 ]
