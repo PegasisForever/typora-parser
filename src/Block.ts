@@ -128,25 +128,41 @@ abstract class ContainerBlock extends Block {
   children: Block[] = []
 
   protected constructChildren(lines: string[]): Block[] {
+    let blockTypesExceptParagraph = blockTypes.filter(it => it !== ParagraphBlock)
     let children: Block[] = []
     out:
       while (lines.length > 0) {
-        let newLines
-        if (children.length > 0 && last(children).isOpen && (newLines = last(children).append(lines))) {
-          lines = newLines
-          continue
-        }
-
-        for (const blockType of blockTypes) {
-          let matchResult = blockType.match(lines)
-          if (matchResult) {
-            children.push(matchResult[0])
-            lines = matchResult[1]
-            continue out
+        if (children.length > 0 && last(children) instanceof ParagraphBlock && last(children).isOpen) {
+          for (const blockType of blockTypesExceptParagraph) {
+            let matchResult = blockType.match(lines)
+            if (matchResult) {
+              last(children).close()
+              children.push(matchResult[0])
+              lines = matchResult[1]
+              continue out
+            }
           }
-        }
 
-        throw new Error(`No match for lines: ${lines}`)
+          lines = last(children).append(lines)
+          console.assert(lines !== null)
+        } else {
+          let newLines
+          if (children.length > 0 && last(children).isOpen && (newLines = last(children).append(lines))) {
+            lines = newLines
+            continue
+          }
+
+          for (const blockType of blockTypes) {
+            let matchResult = blockType.match(lines)
+            if (matchResult) {
+              children.push(matchResult[0])
+              lines = matchResult[1]
+              continue out
+            }
+          }
+
+          throw new Error(`No match for lines: ${lines}`)
+        }
       }
     if (last(children).isOpen) last(children).close()
     return children
@@ -201,6 +217,73 @@ export class QuoteBlock extends ContainerBlock {
   }
 }
 
+export class ListItem extends ContainerBlock {
+  private static unorderedMarkerRegex = /^[-+*] /
+  private static orderedMarkerRegex = /^(\d{1,9}). /
+
+  private _indent = 0
+  set indent(value) {
+    this._indent = value
+    this.indentRegex = new RegExp(`^ {${this.indent}}`)
+  }
+
+  get indent() {
+    return this._indent
+  }
+
+  private indentRegex: RegExp
+  public ordered = true
+  public order = 0
+
+  static match(lines: string[]): BlockMatchResult {
+    let matchResult
+    if ((matchResult = lines[0].match(this.orderedMarkerRegex))) {
+      const listItem = new ListItem()
+      listItem.indent = matchResult[0].length
+      listItem.ordered = true
+      listItem.order = parseInt(matchResult[1], 10)
+      listItem.lines.push(lines[0])
+      return [listItem, lines.slice(1)]
+    } else if ((matchResult = lines[0].match(this.unorderedMarkerRegex))) {
+      const listItem = new ListItem()
+      listItem.indent = matchResult[0].length
+      listItem.ordered = false
+      listItem.lines.push(lines[0])
+      return [listItem, lines.slice(1)]
+    } else {
+      return null
+    }
+  }
+
+  append(lines: string[]): string[] | null {
+    if (lines[0] === '') {
+      if (last(this.lines) === '') {
+        this.close()
+        return null
+      } else {
+        this.lines.push(lines[0])
+        return lines.slice(1)
+      }
+    } else if (lines[0].match(this.indentRegex)) {
+      this.lines.push(lines[0])
+      return lines.slice(1)
+    } else {
+      this.close()
+      return null
+    }
+  }
+
+  close() {
+    super.close()
+    const lines = []
+    lines.push(this.lines[0].replace(this.ordered ? ListItem.orderedMarkerRegex : ListItem.unorderedMarkerRegex, ''))
+    for (let i = 1; i < this.lines.length; i++) {
+      lines.push(this.lines[i].replace(this.indentRegex, ''))
+    }
+    this.children = this.constructChildren(lines)
+  }
+}
+
 
 export const leafBlockTypes = [
   FencedCodeBlock,
@@ -211,6 +294,7 @@ export const leafBlockTypes = [
 
 export const containerBlockTypes = [
   QuoteBlock,
+  ListItem,
 ]
 
 export const blockTypes = [
