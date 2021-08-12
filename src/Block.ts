@@ -1,4 +1,4 @@
-import {last} from './utils'
+import {any, last} from './utils'
 
 export abstract class Block {
   public lines: string[] = []
@@ -128,11 +128,22 @@ abstract class ContainerBlock extends Block {
   children: Block[] = []
 
   protected constructChildren(lines: string[]): Block[] {
+    const blockTypes = [
+      QuoteBlock,
+      ListBlock,
+      FencedCodeBlock,
+      HeadingBlock,
+      DividerBlock,
+      ParagraphBlock,
+    ]
     let blockTypesExceptParagraph = blockTypes.filter(it => it !== ParagraphBlock)
     let children: Block[] = []
     out:
       while (lines.length > 0) {
+        // if last children is an open paragraph
         if (children.length > 0 && last(children) instanceof ParagraphBlock && last(children).isOpen) {
+
+          // if any other block type matches this new line, close the paragraph
           for (const blockType of blockTypesExceptParagraph) {
             let matchResult = blockType.match(lines)
             if (matchResult) {
@@ -143,15 +154,19 @@ abstract class ContainerBlock extends Block {
             }
           }
 
+          // if no other block type matches this new line, append this line to the paragraph
           lines = last(children).append(lines)
           console.assert(lines !== null)
         } else {
+
+          // try to append new line to the last open children
           let newLines
           if (children.length > 0 && last(children).isOpen && (newLines = last(children).append(lines))) {
             lines = newLines
             continue
           }
 
+          // try to find a block type that matches the new line
           for (const blockType of blockTypes) {
             let matchResult = blockType.match(lines)
             if (matchResult) {
@@ -217,9 +232,11 @@ export class QuoteBlock extends ContainerBlock {
   }
 }
 
-export class ListItem extends ContainerBlock {
-  private static unorderedMarkerRegex = /^[-+*] /
-  private static orderedMarkerRegex = /^(\d{1,9}). /
+export type ListMarkerType = '-' | '+' | '*' | '.' | ')'
+
+export class ListItemBlock extends ContainerBlock {
+  private static unorderedMarkerRegex = /^([-+*]) /
+  private static orderedMarkerRegex = /^(\d{1,9})([.)]) /
 
   private _indent = 0
   set indent(value) {
@@ -232,23 +249,30 @@ export class ListItem extends ContainerBlock {
   }
 
   private indentRegex: RegExp
-  public ordered = true
+  public isOrdered = true
   public order = 0
+  public listMarkerType: ListMarkerType
+
+  get isLoose() {
+    return any(this.children, it => last(it.lines) === '')
+  }
 
   static match(lines: string[]): BlockMatchResult {
     let matchResult
     if ((matchResult = lines[0].match(this.orderedMarkerRegex))) {
-      const listItem = new ListItem()
+      const listItem = new ListItemBlock()
       listItem.indent = matchResult[0].length
-      listItem.ordered = true
+      listItem.isOrdered = true
       listItem.order = parseInt(matchResult[1], 10)
       listItem.lines.push(lines[0])
+      listItem.listMarkerType = matchResult[2]
       return [listItem, lines.slice(1)]
     } else if ((matchResult = lines[0].match(this.unorderedMarkerRegex))) {
-      const listItem = new ListItem()
+      const listItem = new ListItemBlock()
       listItem.indent = matchResult[0].length
-      listItem.ordered = false
+      listItem.isOrdered = false
       listItem.lines.push(lines[0])
+      listItem.listMarkerType = matchResult[1]
       return [listItem, lines.slice(1)]
     } else {
       return null
@@ -276,7 +300,7 @@ export class ListItem extends ContainerBlock {
   close() {
     super.close()
     const lines = []
-    lines.push(this.lines[0].replace(this.ordered ? ListItem.orderedMarkerRegex : ListItem.unorderedMarkerRegex, ''))
+    lines.push(this.lines[0].replace(this.isOrdered ? ListItemBlock.orderedMarkerRegex : ListItemBlock.unorderedMarkerRegex, ''))
     for (let i = 1; i < this.lines.length; i++) {
       lines.push(this.lines[i].replace(this.indentRegex, ''))
     }
@@ -284,20 +308,53 @@ export class ListItem extends ContainerBlock {
   }
 }
 
+class ListBlock extends ContainerBlock {
+  children: ListItemBlock[] = []
+  startNumber = 1
 
-export const leafBlockTypes = [
-  FencedCodeBlock,
-  HeadingBlock,
-  DividerBlock,
-  ParagraphBlock,
-]
+  get isLoose() {
+    return any(this.children, it => it.isLoose)
+  }
 
-export const containerBlockTypes = [
-  QuoteBlock,
-  ListItem,
-]
+  get listMarkerType(): ListMarkerType {
+    return this.children[0].listMarkerType
+  }
 
-export const blockTypes = [
-  ...containerBlockTypes,
-  ...leafBlockTypes,
-]
+  static match(lines: string[]): BlockMatchResult {
+    const matchResult = ListItemBlock.match(lines)
+    if (matchResult) {
+      const listBlock = new ListBlock()
+      listBlock.children.push(matchResult[0] as ListItemBlock)
+      return [listBlock, matchResult[1]]
+    } else {
+      return null
+    }
+  }
+
+  append(lines: string[]): string[] | null {
+    if (last(this.children).isOpen) {
+      const newLines = last(this.children).append(lines)
+      if (newLines) {
+        return newLines
+      }
+    }
+
+    console.assert(!last(this.children).isOpen)
+    const matchResult = ListItemBlock.match(lines)
+    if (matchResult) {
+      const newChild = matchResult[0] as ListItemBlock
+      if (newChild.listMarkerType === this.listMarkerType) {
+        this.children.push(matchResult[0] as ListItemBlock)
+        return matchResult[1]
+      }
+    }
+
+    this.close()
+    return null
+  }
+
+  close() {
+    super.close()
+    if (last(this.children).isOpen) last(this.children).close()
+  }
+}

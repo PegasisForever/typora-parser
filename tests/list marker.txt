@@ -1,0 +1,14 @@
+// should match
+// unordered
+- a
++ a
+* a
+   - a
+// ordered
+1. a
+1.   a
+1) a
+
+// shouldn't match
+    - a
+1111111111. a
