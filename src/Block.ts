@@ -1,6 +1,15 @@
+import {last} from './utils'
+
 export abstract class Block {
   public lines: string[] = []
-  public isOpen = true
+  private _isOpen = true
+  public get isOpen() {
+    return this._isOpen
+  }
+
+  close() {
+    this._isOpen = false
+  }
 
   // return consumed string[] if successfully appended
   abstract append(lines: string[]): string[] | null
@@ -12,7 +21,7 @@ export class ParagraphBlock extends Block {
   static match(lines: string[]): BlockMatchResult {
     const paragraph = new ParagraphBlock()
     if (lines.length >= 2 && lines[0] === '' && lines[1] === '') {
-      paragraph.isOpen = false
+      paragraph.close()
       return [paragraph, lines.slice(2)]
     } else {
       paragraph.lines.push(lines[0])
@@ -24,7 +33,7 @@ export class ParagraphBlock extends Block {
     if (!this.isOpen) {
       return null
     } else if (lines[0] === '') {
-      this.isOpen = false
+      this.close()
       return lines.slice(1)
     } else {
       this.lines.push(lines[0])
@@ -40,7 +49,7 @@ export class DividerBlock extends Block {
     if (lines.length >= 2 && lines[1] === '' && lines[0].match(this.regex)) {
       const divider = new DividerBlock()
       divider.lines.push(lines[0])
-      divider.isOpen = false
+      divider.close()
       return [divider, lines.slice(2)]
     } else {
       return null
@@ -62,7 +71,7 @@ export class HeadingBlock extends Block {
       const heading = new HeadingBlock()
       heading.lines.push(lines[0])
       heading.content = regexMatchResult[1]
-      heading.isOpen = false
+      heading.close()
       return [heading, lines.slice(2)]
     } else {
       return null
@@ -106,7 +115,7 @@ export class FencedCodeBlock extends Block {
   append(lines: string[]): string[] | null {
     const line = lines[0].replace(this.indentRegex, '')
     if (lines.length >= 2 && line === this.startToken && lines[1] === '') {
-      this.isOpen = false
+      this.close()
       return lines.slice(2)
     } else {
       this.lines.push(line)
@@ -115,9 +124,96 @@ export class FencedCodeBlock extends Block {
   }
 }
 
-export const blockTypes = [
+abstract class ContainerBlock extends Block {
+  children: Block[] = []
+
+  protected constructChildren(lines: string[]): Block[] {
+    let children: Block[] = []
+    out:
+      while (lines.length > 0) {
+        let newLines
+        if (children.length > 0 && last(children).isOpen && (newLines = last(children).append(lines))) {
+          lines = newLines
+          continue
+        }
+
+        for (const blockType of blockTypes) {
+          let matchResult = blockType.match(lines)
+          if (matchResult) {
+            children.push(matchResult[0])
+            lines = matchResult[1]
+            continue out
+          }
+        }
+
+        throw new Error(`No match for lines: ${lines}`)
+      }
+    if (last(children).isOpen) last(children).close()
+    return children
+  }
+}
+
+export class RootBlock extends ContainerBlock {
+  constructor(lines: string[]) {
+    super()
+    this.lines = lines
+  }
+
+  close() {
+    super.close()
+    this.children = this.constructChildren(this.lines)
+  }
+
+  append(lines: string[]): string[] | null {
+    this.lines.push(...lines)
+    return []
+  }
+}
+
+export class QuoteBlock extends ContainerBlock {
+  private static quoteMarkerRegex = /^ {0,3}> ?/
+
+  static match(lines: string[]): BlockMatchResult {
+    if (lines[0].match(this.quoteMarkerRegex)) {
+      const quote = new QuoteBlock()
+      quote.lines.push(lines[0])
+      return [quote, lines.slice(1)]
+    } else {
+      return null
+    }
+  }
+
+  append(lines: string[]): string[] | null {
+    if (lines[0].match(QuoteBlock.quoteMarkerRegex)) {
+      this.lines.push(lines[0])
+      return lines.slice(1)
+    } else {
+      console.assert(lines[0] === '')
+      this.close()
+      return lines.slice(1)
+    }
+  }
+
+  close() {
+    super.close()
+    const lines = this.lines.map(it => it.replace(QuoteBlock.quoteMarkerRegex, ''))
+    this.children = this.constructChildren(lines)
+  }
+}
+
+
+export const leafBlockTypes = [
   FencedCodeBlock,
   HeadingBlock,
   DividerBlock,
   ParagraphBlock,
+]
+
+export const containerBlockTypes = [
+  QuoteBlock,
+]
+
+export const blockTypes = [
+  ...containerBlockTypes,
+  ...leafBlockTypes,
 ]
