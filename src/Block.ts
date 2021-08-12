@@ -52,7 +52,31 @@ export class DividerBlock extends Block {
   }
 }
 
+export class HeadingBlock extends Block {
+  private static regex = /^ {0,3}#{1,6}[ \t]+(.*?)([ \t]+#+)?[ \t]*$/
+  public content = ''
+
+  static match(lines: string[]): BlockMatchResult {
+    let regexMatchResult
+    if (lines.length >= 2 && lines[1] === '' && (regexMatchResult = lines[0].match(this.regex))) {
+      const heading = new HeadingBlock()
+      heading.lines.push(lines[0])
+      heading.content = regexMatchResult[1]
+      heading.isOpen=false
+      return [heading, lines.slice(2)]
+    } else {
+      return null
+    }
+  }
+
+  append(lines: string[]): string[] | null {
+    return null
+  }
+
+}
+
 export const blockTypes = [
+  HeadingBlock,
   DividerBlock,
   ParagraphBlock,
 ]

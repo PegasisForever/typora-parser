@@ -1,0 +1,30 @@
+// should match
+# foo
+## foo
+### foo
+#### foo
+##### foo
+###### foo
+# foo *bar* \*baz\*
+#                  foo
+ ### foo
+  ## foo
+   # foo
+## foo ##
+  ###   bar    ###
+# foo ##################################
+##### foo ##
+### foo ###
+### foo ### b
+# foo#
+### foo \###
+## foo #\##
+# foo \#
+##
+#
+### ###
+
+// shouldn't match
+####### foo
+\## foo
+    # foo
