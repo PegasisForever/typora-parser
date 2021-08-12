@@ -11,7 +11,7 @@ import {last} from './utils'
   out:
     while (lines.length > 0) {
       let newLines
-      if (blocks.length > 0 && (newLines = last(blocks).append(lines))) {
+      if (blocks.length > 0 && last(blocks).isOpen && (newLines = last(blocks).append(lines))) {
         lines = newLines
         continue
       }

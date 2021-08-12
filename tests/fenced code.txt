@@ -1,0 +1,13 @@
+// should match
+```
+`````
+~~~
+~~~~~
+   ```
+```ruby
+```` ruby
+```   ruby
+
+// shouldn't match
+    ```
+``~
