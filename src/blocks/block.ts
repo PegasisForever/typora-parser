@@ -1,6 +1,6 @@
-export type BlockMatchResult = [Blocks, string[]] | null
+export type BlockMatchResult = [Block, string[]] | null
 
-export abstract class Blocks {
+export abstract class Block {
   lines: string[] = []
   private _isOpen = true
   get isOpen() {
@@ -18,5 +18,5 @@ export abstract class Blocks {
     return this.lines.join('')
   }
 
-  abstract render(parent: Blocks): string
+  abstract render(parent: Block): string
 }

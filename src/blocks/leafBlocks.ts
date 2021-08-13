@@ -1,7 +1,8 @@
-import {BlockMatchResult, Blocks} from './blocks'
+import {Block, BlockMatchResult} from './block'
 import {ListItemBlock} from './containerBlocks'
+import {any} from '../utils'
 
-export class ParagraphBlock extends Blocks {
+export class ParagraphBlock extends Block {
   static match(lines: string[]): BlockMatchResult {
     const paragraph = new ParagraphBlock()
     if (lines.length >= 2 && lines[0] === '' && lines[1] === '') {
@@ -25,7 +26,7 @@ export class ParagraphBlock extends Blocks {
     }
   }
 
-  render(parent: Blocks): string {
+  render(parent: Block): string {
     if (parent instanceof ListItemBlock && !parent.isLoose) {
       return this.renderChildren()
     } else {
@@ -38,7 +39,7 @@ export class ParagraphBlock extends Blocks {
   }
 }
 
-export class DividerBlock extends Blocks {
+export class DividerBlock extends Block {
   private static readonly regex = /^ {0,3}((\*[ \t]*){3,}|(-[ \t]*){3,}|(_[ \t]*){3,})$/
 
   static match(lines: string[]): BlockMatchResult {
@@ -56,12 +57,12 @@ export class DividerBlock extends Blocks {
     return null
   }
 
-  render(parent: Blocks): string {
+  render(parent: Block): string {
     return `<hr />\n`
   }
 }
 
-export class HeadingBlock extends Blocks {
+export class HeadingBlock extends Block {
   private static readonly regex = /^ {0,3}(#{1,6})[ \t]+(.*?)([ \t]+#+)?[ \t]*$/
   content = ''
   level: 1 | 2 | 3 | 4 | 5 | 6
@@ -88,12 +89,12 @@ export class HeadingBlock extends Blocks {
     return this.content
   }
 
-  render(parent: Blocks): string {
+  render(parent: Block): string {
     return `<h${this.level} id='${this.content.replaceAll(' ', '-').toLowerCase()}'>${this.renderChildren()}</h${this.level}>\n`
   }
 }
 
-export class FencedCodeBlock extends Blocks {
+export class FencedCodeBlock extends Block {
   private static readonly startRegex = /^( {0,3})(`{3,}|~{3,}) *(.*?) *$/
   private _indent = 0
   private indentRegex: RegExp
@@ -125,9 +126,13 @@ export class FencedCodeBlock extends Blocks {
 
   append(lines: string[]): string[] | null {
     const line = lines[0].replace(this.indentRegex, '')
-    if (lines.length >= 2 && line === this.startToken && lines[1] === '') {
+    if (line === this.startToken) {
       this.close()
-      return lines.slice(2)
+      if (lines.length > 1 && lines[1] === '') {
+        return lines.slice(2)
+      } else {
+        return lines.slice(1)
+      }
     } else {
       this.lines.push(line)
       return lines.slice(1)
@@ -138,7 +143,7 @@ export class FencedCodeBlock extends Blocks {
     return this.lines.join('\n') + '\n'
   }
 
-  render(parent: Blocks): string {
+  render(parent: Block): string {
     return `<pre><code>${this.renderChildren()}</code></pre>\n`
   }
 }
@@ -149,7 +154,7 @@ enum TableCellAlign {
   RIGHT
 }
 
-export class TableBlock extends Blocks {
+export class TableBlock extends Block {
   private static readonly delimiterCellRegex = /^\| *(:?)-+(:?) */
   columnAlign: TableCellAlign[] = []
   rows: string[][] = []
@@ -238,7 +243,7 @@ export class TableBlock extends Blocks {
     return `<tr>${this.rows[i].map((cellText, i) => `<${tag}${getAlignStyle(this.columnAlign[i])}>${cellText}</${tag}>`).join('')}</tr>`
   }
 
-  render(parent: Blocks): string {
+  render(parent: Block): string {
     const titleStr = `<thead>\n${this.renderRow(0)}</thead>\n`
     let bodyStr = ''
     for (let i = 1; i < this.rows.length; i++) {
@@ -246,5 +251,47 @@ export class TableBlock extends Blocks {
     }
     bodyStr = `<tbody>${bodyStr}</tbody>\n`
     return `<figure><table>\n${titleStr}${bodyStr}</table></figure>\n`
+  }
+}
+
+export class FrontMatterBlock extends Block {
+  static process(lines: string[]): [string[], FrontMatterBlock | null] {
+    let matchResult = FrontMatterBlock.match(lines)
+    if (matchResult) {
+      let [frontMatter, lines] = matchResult
+      while (frontMatter.isOpen) {
+        lines = frontMatter.append(lines)
+      }
+      return [lines, frontMatter]
+    } else {
+      return [lines, null]
+    }
+  }
+
+  static match(lines: string[]): BlockMatchResult {
+    if (lines[0] === '---' && any(lines.slice(1), line => line === '---' || line === '...')) {
+      const frontMatter = new FrontMatterBlock()
+      return [frontMatter, lines.slice(1)]
+    } else {
+      return null
+    }
+  }
+
+  append(lines: string[]): string[] | null {
+    if (lines[0] === '---' || lines[0] === '...') {
+      this.close()
+      if (lines.length > 0 && lines[1] === '') {
+        return lines.slice(2)
+      } else {
+        return lines.slice(1)
+      }
+    } else {
+      this.lines.push(lines[0])
+      return lines.slice(1)
+    }
+  }
+
+  render(parent: Block): string {
+    return ''
   }
 }

@@ -1,11 +1,11 @@
-import {BlockMatchResult, Blocks} from './blocks'
+import {BlockMatchResult, Block} from './block'
 import {any, last} from '../utils'
 import {DividerBlock, FencedCodeBlock, HeadingBlock, ParagraphBlock, TableBlock} from './leafBlocks'
 
-export abstract class ContainerBlock extends Blocks {
-  children: Blocks[] = []
+export abstract class ContainerBlock extends Block {
+  children: Block[] = []
 
-  protected constructChildren(lines: string[]): Blocks[] {
+  protected constructChildren(lines: string[]): Block[] {
 
     const blockTypes = [
       QuoteBlock,
@@ -17,7 +17,7 @@ export abstract class ContainerBlock extends Blocks {
       ParagraphBlock,
     ]
     let blockTypesExceptParagraph = blockTypes.filter(it => it !== ParagraphBlock)
-    let children: Blocks[] = []
+    let children: Block[] = []
     out:
       while (lines.length > 0) {
         // if last children is an open paragraph
@@ -119,7 +119,7 @@ export class QuoteBlock extends ContainerBlock {
     this.children = this.constructChildren(lines)
   }
 
-  render(parent: Blocks): string {
+  render(parent: Block): string {
     return `<blockquote>${this.renderChildren()}</blockquote>\n`
   }
 }
@@ -298,7 +298,7 @@ export class ListBlock extends ContainerBlock {
     this.isLoose = this.isLoose
   }
 
-  render(parent: Blocks): string {
+  render(parent: Block): string {
     if (this.isOrdered) {
       const startStr = this.startNumber !== 1 ? ` start='${this.startNumber}' ` : ''
       return `<ol${startStr}>\n${this.renderChildren()}\n</ol>\n`
