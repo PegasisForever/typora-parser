@@ -1,6 +1,6 @@
 import {BlockMatchResult, Blocks} from './blocks'
 import {any, last} from '../utils'
-import {DividerBlock, FencedCodeBlock, HeadingBlock, ParagraphBlock} from './leafBlocks'
+import {DividerBlock, FencedCodeBlock, HeadingBlock, ParagraphBlock, TableBlock} from './leafBlocks'
 
 export abstract class ContainerBlock extends Blocks {
   children: Blocks[] = []
@@ -10,6 +10,7 @@ export abstract class ContainerBlock extends Blocks {
     const blockTypes = [
       QuoteBlock,
       ListBlock,
+      TableBlock,
       FencedCodeBlock,
       HeadingBlock,
       DividerBlock,

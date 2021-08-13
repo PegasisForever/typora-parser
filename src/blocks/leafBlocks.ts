@@ -1,4 +1,4 @@
-import {Blocks, BlockMatchResult} from './blocks'
+import {BlockMatchResult, Blocks} from './blocks'
 import {ListItemBlock} from './containerBlocks'
 
 export class ParagraphBlock extends Blocks {
@@ -140,5 +140,111 @@ export class FencedCodeBlock extends Blocks {
 
   render(parent: Blocks): string {
     return `<pre><code>${this.renderChildren()}</code></pre>\n`
+  }
+}
+
+enum TableCellAlign {
+  LEFT,
+  CENTER,
+  RIGHT
+}
+
+export class TableBlock extends Blocks {
+  private static readonly delimiterCellRegex = /^\| *(:?)-+(:?) */
+  columnAlign: TableCellAlign[] = []
+  rows: string[][] = []
+
+  private static splitRow(line: string): string[] {
+    let pipeIndexes: number[] = []
+    let escape = false
+    for (let i = 0; i < line.length; i++) {
+      if (escape) {
+        escape = false
+      } else if (line[i] === '\\') {
+        escape = true
+      } else if (line[i] === '|') {
+        pipeIndexes.push(i)
+      }
+    }
+
+    let result: string[] = []
+    for (let i = 0; i < pipeIndexes.length - 1; i++) {
+      result.push(line.slice(pipeIndexes[i] + 1, pipeIndexes[i + 1]).trim())
+    }
+    return result
+  }
+
+  static match(lines: string[]): BlockMatchResult {
+    if (lines.length >= 2) {
+      let delimiterRow = lines[1]
+      let columnAlign: TableCellAlign[] = []
+      let matchResult
+      while (matchResult = delimiterRow.match(this.delimiterCellRegex)) {
+        const colon1 = matchResult[1] === ':'
+        const colon2 = matchResult[2] === ':'
+        if (colon1 && colon2) {
+          columnAlign.push(TableCellAlign.CENTER)
+        } else if (!colon1 && colon2) {
+          columnAlign.push(TableCellAlign.RIGHT)
+        } else {
+          columnAlign.push(TableCellAlign.LEFT)
+        }
+        delimiterRow = delimiterRow.slice(matchResult[0].length)
+      }
+      if (columnAlign.length < 2 || delimiterRow !== '|') {
+        return null
+      }
+
+      let titleRow = this.splitRow(lines[0])
+      if (titleRow.length !== columnAlign.length) {
+        return null
+      }
+
+      const tableBlock = new TableBlock()
+      tableBlock.columnAlign = columnAlign
+      tableBlock.rows.push(titleRow)
+      tableBlock.lines.push(lines[0], lines[1])
+      return [tableBlock, lines.slice(2)]
+    } else {
+      return null
+    }
+  }
+
+  append(lines: string[]): string[] | null {
+    if (lines[0][0] === '|') {
+      this.rows.push(TableBlock.splitRow(lines[0]))
+      return lines.slice(1)
+    } else {
+      console.assert(lines[0] === '')
+      this.close()
+      return lines.slice(1)
+    }
+  }
+
+  private renderRow(i: number): string {
+    const tag = i === 0 ? 'th' : 'td'
+
+    function getAlignStyle(align: TableCellAlign): string {
+      switch (align) {
+        case TableCellAlign.LEFT:
+          return ''
+        case TableCellAlign.CENTER:
+          return ` style='text-align:center;' `
+        case TableCellAlign.RIGHT:
+          return ` style='text-align:right;' `
+      }
+    }
+
+    return `<tr>${this.rows[i].map((cellText, i) => `<${tag}${getAlignStyle(this.columnAlign[i])}>${cellText}</${tag}>`).join('')}</tr>`
+  }
+
+  render(parent: Blocks): string {
+    const titleStr = `<thead>\n${this.renderRow(0)}</thead>\n`
+    let bodyStr = ''
+    for (let i = 1; i < this.rows.length; i++) {
+      bodyStr += this.renderRow(i)
+    }
+    bodyStr = `<tbody>${bodyStr}</tbody>\n`
+    return `<figure><table>\n${titleStr}${bodyStr}</table></figure>\n`
   }
 }
