@@ -1,174 +1,12 @@
-import {any, last} from './utils'
+import {BlockMatchResult, Blocks} from './blocks'
+import {any, last} from '../utils'
+import {DividerBlock, FencedCodeBlock, HeadingBlock, ParagraphBlock} from './leafBlocks'
 
-export abstract class Block {
-  public lines: string[] = []
-  private _isOpen = true
-  public get isOpen() {
-    return this._isOpen
-  }
+export abstract class ContainerBlock extends Blocks {
+  children: Blocks[] = []
 
-  close() {
-    this._isOpen = false
-  }
+  protected constructChildren(lines: string[]): Blocks[] {
 
-  // return consumed string[] if successfully appended
-  abstract append(lines: string[]): string[] | null
-
-  protected renderChildren(): string {
-    return this.lines.join('')
-  }
-
-  abstract render(parent: Block): string
-}
-
-export type BlockMatchResult = [Block, string[]] | null
-
-export class ParagraphBlock extends Block {
-  static match(lines: string[]): BlockMatchResult {
-    const paragraph = new ParagraphBlock()
-    if (lines.length >= 2 && lines[0] === '' && lines[1] === '') {
-      paragraph.close()
-      return [paragraph, lines.slice(2)]
-    } else {
-      paragraph.lines.push(lines[0])
-      return [paragraph, lines.slice(1)]
-    }
-  }
-
-  append(lines: string[]): string[] | null {
-    if (!this.isOpen) {
-      return null
-    } else if (lines[0] === '') {
-      this.close()
-      return lines.slice(1)
-    } else {
-      this.lines.push(lines[0])
-      return lines.slice(1)
-    }
-  }
-
-  render(parent: Block): string {
-    if (parent instanceof ListItemBlock && !parent.isLoose) {
-      return this.renderChildren()
-    } else {
-      if (this.lines.length === 0 || (this.lines.length === 1 && this.lines[0] === '')) {
-        return `<p>&nbsp;</p>\n`
-      } else {
-        return `<p>${this.renderChildren()}</p>\n`
-      }
-    }
-  }
-}
-
-export class DividerBlock extends Block {
-  private static regex = /^ {0,3}((\*[ \t]*){3,}|(-[ \t]*){3,}|(_[ \t]*){3,})$/
-
-  static match(lines: string[]): BlockMatchResult {
-    if (lines.length >= 2 && lines[1] === '' && lines[0].match(this.regex)) {
-      const divider = new DividerBlock()
-      divider.lines.push(lines[0])
-      divider.close()
-      return [divider, lines.slice(2)]
-    } else {
-      return null
-    }
-  }
-
-  append(lines: string[]): string[] | null {
-    return null
-  }
-
-  render(parent: Block): string {
-    return `<hr />\n`
-  }
-}
-
-export class HeadingBlock extends Block {
-  private static regex = /^ {0,3}(#{1,6})[ \t]+(.*?)([ \t]+#+)?[ \t]*$/
-  public content = ''
-  public level: 1 | 2 | 3 | 4 | 5 | 6
-
-  static match(lines: string[]): BlockMatchResult {
-    let regexMatchResult
-    if (lines.length >= 2 && lines[1] === '' && (regexMatchResult = lines[0].match(this.regex))) {
-      const heading = new HeadingBlock()
-      heading.lines.push(lines[0])
-      heading.content = regexMatchResult[2]
-      heading.level = regexMatchResult[1].length
-      heading.close()
-      return [heading, lines.slice(2)]
-    } else {
-      return null
-    }
-  }
-
-  append(lines: string[]): string[] | null {
-    return null
-  }
-
-  protected renderChildren(): string {
-    return this.content
-  }
-
-  render(parent: Block): string {
-    // todo id
-    return `<h${this.level} id='${this.content.replaceAll(' ', '-').toLowerCase()}'>${this.renderChildren()}</h${this.level}>\n`
-  }
-}
-
-export class FencedCodeBlock extends Block {
-  private static startRegex = /^( {0,3})(`{3,}|~{3,}) *(.*?) *$/
-  private _indent = 0
-  set indent(value) {
-    this._indent = value
-    this.indentRegex = new RegExp(`^ {0,${this.indent}}`)
-  }
-
-  get indent() {
-    return this._indent
-  }
-
-  private indentRegex: RegExp
-  public startToken = ''
-  public infoString = ''
-
-  static match(lines: string[]): BlockMatchResult {
-    let regexMatchResult = lines[0].match(this.startRegex)
-    if (regexMatchResult) {
-      const fencedCode = new FencedCodeBlock()
-      fencedCode.indent = regexMatchResult[1].length
-      fencedCode.startToken = regexMatchResult[2]
-      fencedCode.infoString = regexMatchResult[3]
-      return [fencedCode, lines.slice(1)]
-    } else {
-      return null
-    }
-  }
-
-  append(lines: string[]): string[] | null {
-    const line = lines[0].replace(this.indentRegex, '')
-    if (lines.length >= 2 && line === this.startToken && lines[1] === '') {
-      this.close()
-      return lines.slice(2)
-    } else {
-      this.lines.push(line)
-      return lines.slice(1)
-    }
-  }
-
-  protected renderChildren(): string {
-    return this.lines.join('\n') + '\n'
-  }
-
-  render(parent: Block): string {
-    return `<pre><code>${this.renderChildren()}</code></pre>\n`
-  }
-}
-
-abstract class ContainerBlock extends Block {
-  children: Block[] = []
-
-  protected constructChildren(lines: string[]): Block[] {
     const blockTypes = [
       QuoteBlock,
       ListBlock,
@@ -178,7 +16,7 @@ abstract class ContainerBlock extends Block {
       ParagraphBlock,
     ]
     let blockTypesExceptParagraph = blockTypes.filter(it => it !== ParagraphBlock)
-    let children: Block[] = []
+    let children: Blocks[] = []
     out:
       while (lines.length > 0) {
         // if last children is an open paragraph
@@ -251,7 +89,7 @@ export class RootBlock extends ContainerBlock {
 }
 
 export class QuoteBlock extends ContainerBlock {
-  private static quoteMarkerRegex = /^ {0,3}> ?/
+  private static readonly quoteMarkerRegex = /^ {0,3}> ?/
 
   static match(lines: string[]): BlockMatchResult {
     if (lines[0].match(this.quoteMarkerRegex)) {
@@ -280,7 +118,7 @@ export class QuoteBlock extends ContainerBlock {
     this.children = this.constructChildren(lines)
   }
 
-  render(parent: Block): string {
+  render(parent: Blocks): string {
     return `<blockquote>${this.renderChildren()}</blockquote>\n`
   }
 }
@@ -302,9 +140,9 @@ export class ListItemBlock extends ContainerBlock {
   }
 
   private indentRegex: RegExp
-  public isOrdered = true
-  public order = 0
-  public listMarkerType: ListMarkerType
+  isOrdered = true
+  order = 0
+  listMarkerType: ListMarkerType
 
   _isLoose: boolean | null = null
 
@@ -389,7 +227,7 @@ export class ListItemBlock extends ContainerBlock {
   }
 }
 
-class ListBlock extends ContainerBlock {
+export class ListBlock extends ContainerBlock {
   children: ListItemBlock[] = []
 
   _isLoose: boolean | null = null
@@ -459,7 +297,7 @@ class ListBlock extends ContainerBlock {
     this.isLoose = this.isLoose
   }
 
-  render(parent: Block): string {
+  render(parent: Blocks): string {
     if (this.isOrdered) {
       const startStr = this.startNumber !== 1 ? ` start='${this.startNumber}' ` : ''
       return `<ol${startStr}>\n${this.renderChildren()}\n</ol>\n`
