@@ -13,6 +13,12 @@ export abstract class Block {
 
   // return consumed string[] if successfully appended
   abstract append(lines: string[]): string[] | null
+
+  protected renderChildren(): string {
+    return this.lines.join('')
+  }
+
+  abstract render(parent: Block): string
 }
 
 export type BlockMatchResult = [Block, string[]] | null
@@ -40,6 +46,18 @@ export class ParagraphBlock extends Block {
       return lines.slice(1)
     }
   }
+
+  render(parent: Block): string {
+    if (parent instanceof ListItemBlock && !parent.isLoose) {
+      return this.renderChildren()
+    } else {
+      if (this.lines.length === 0 || (this.lines.length === 1 && this.lines[0] === '')) {
+        return `<p>&nbsp;</p>\n`
+      } else {
+        return `<p>${this.renderChildren()}</p>\n`
+      }
+    }
+  }
 }
 
 export class DividerBlock extends Block {
@@ -59,18 +77,24 @@ export class DividerBlock extends Block {
   append(lines: string[]): string[] | null {
     return null
   }
+
+  render(parent: Block): string {
+    return `<hr />\n`
+  }
 }
 
 export class HeadingBlock extends Block {
-  private static regex = /^ {0,3}#{1,6}[ \t]+(.*?)([ \t]+#+)?[ \t]*$/
+  private static regex = /^ {0,3}(#{1,6})[ \t]+(.*?)([ \t]+#+)?[ \t]*$/
   public content = ''
+  public level: 1 | 2 | 3 | 4 | 5 | 6
 
   static match(lines: string[]): BlockMatchResult {
     let regexMatchResult
     if (lines.length >= 2 && lines[1] === '' && (regexMatchResult = lines[0].match(this.regex))) {
       const heading = new HeadingBlock()
       heading.lines.push(lines[0])
-      heading.content = regexMatchResult[1]
+      heading.content = regexMatchResult[2]
+      heading.level = regexMatchResult[1].length
       heading.close()
       return [heading, lines.slice(2)]
     } else {
@@ -80,6 +104,15 @@ export class HeadingBlock extends Block {
 
   append(lines: string[]): string[] | null {
     return null
+  }
+
+  protected renderChildren(): string {
+    return this.content
+  }
+
+  render(parent: Block): string {
+    // todo id
+    return `<h${this.level} id='${this.content.replaceAll(' ', '-').toLowerCase()}'>${this.renderChildren()}</h${this.level}>\n`
   }
 }
 
@@ -121,6 +154,14 @@ export class FencedCodeBlock extends Block {
       this.lines.push(line)
       return lines.slice(1)
     }
+  }
+
+  protected renderChildren(): string {
+    return this.lines.join('\n') + '\n'
+  }
+
+  render(parent: Block): string {
+    return `<pre><code>${this.renderChildren()}</code></pre>\n`
   }
 }
 
@@ -182,6 +223,10 @@ abstract class ContainerBlock extends Block {
     if (last(children).isOpen) last(children).close()
     return children
   }
+
+  protected renderChildren(): string {
+    return this.children.map(it => it.render(this)).join('')
+  }
 }
 
 export class RootBlock extends ContainerBlock {
@@ -198,6 +243,10 @@ export class RootBlock extends ContainerBlock {
   append(lines: string[]): string[] | null {
     this.lines.push(...lines)
     return []
+  }
+
+  render(): string {
+    return this.renderChildren()
   }
 }
 
@@ -230,13 +279,17 @@ export class QuoteBlock extends ContainerBlock {
     const lines = this.lines.map(it => it.replace(QuoteBlock.quoteMarkerRegex, ''))
     this.children = this.constructChildren(lines)
   }
+
+  render(parent: Block): string {
+    return `<blockquote>${this.renderChildren()}</blockquote>\n`
+  }
 }
 
 export type ListMarkerType = '-' | '+' | '*' | '.' | ')'
 
 export class ListItemBlock extends ContainerBlock {
-  private static unorderedMarkerRegex = /^([-+*]) /
-  private static orderedMarkerRegex = /^(\d{1,9})([.)]) /
+  private static readonly unorderedMarkerRegex = /^([-+*]) /
+  private static readonly orderedMarkerRegex = /^(\d{1,9})([.)]) /
 
   private _indent = 0
   set indent(value) {
@@ -253,8 +306,28 @@ export class ListItemBlock extends ContainerBlock {
   public order = 0
   public listMarkerType: ListMarkerType
 
+  _isLoose: boolean | null = null
+
+  set isLoose(value: boolean) {
+    this._isLoose = value
+  }
+
   get isLoose() {
-    return any(this.children, it => last(it.lines) === '')
+    if (!this._isLoose) {
+      if (this.children.length === 1 && this.children[0] instanceof ParagraphBlock) {
+        this._isLoose = false
+      } else {
+        this._isLoose = any(this.children, it => {
+          if (it instanceof ListBlock) {
+            return it.isLoose
+          } else {
+            return true
+          }
+        })
+      }
+    }
+
+    return this._isLoose
   }
 
   static match(lines: string[]): BlockMatchResult {
@@ -306,14 +379,41 @@ export class ListItemBlock extends ContainerBlock {
     }
     this.children = this.constructChildren(lines)
   }
+
+  render(parent: ListBlock): string {
+    if (parent.isLoose) {
+      return `<li>${this.renderChildren()}</li>\n`
+    } else {
+      return `<li>${this.renderChildren()}</li>\n`
+    }
+  }
 }
 
 class ListBlock extends ContainerBlock {
   children: ListItemBlock[] = []
-  startNumber = 1
+
+  _isLoose: boolean | null = null
+
+  set isLoose(value: boolean) {
+    this._isLoose = value
+    for (const listItem of this.children) {
+      listItem.isLoose = value
+    }
+  }
 
   get isLoose() {
-    return any(this.children, it => it.isLoose)
+    if (!this._isLoose) {
+      this._isLoose = any(this.children, it => it.isLoose)
+    }
+    return this._isLoose
+  }
+
+  get startNumber() {
+    return this.children[0].order
+  }
+
+  get isOrdered() {
+    return this.children[0].isOrdered
   }
 
   get listMarkerType(): ListMarkerType {
@@ -356,5 +456,15 @@ class ListBlock extends ContainerBlock {
   close() {
     super.close()
     if (last(this.children).isOpen) last(this.children).close()
+    this.isLoose = this.isLoose
+  }
+
+  render(parent: Block): string {
+    if (this.isOrdered) {
+      const startStr = this.startNumber !== 1 ? ` start='${this.startNumber}' ` : ''
+      return `<ol${startStr}>\n${this.renderChildren()}\n</ol>\n`
+    } else {
+      return `<ul>\n${this.renderChildren()}\n</ul>\n`
+    }
   }
 }
