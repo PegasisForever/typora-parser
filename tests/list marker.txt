@@ -3,7 +3,11 @@
 - a
 + a
 * a
-   - a
+-   a
+// unordered, task marker
+- [x] a
+- [ ] b
+*   [ ]  c
 // ordered
 1. a
 1.   a

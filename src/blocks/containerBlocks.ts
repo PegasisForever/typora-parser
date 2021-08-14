@@ -1,4 +1,4 @@
-import {BlockMatchResult, Block} from './block'
+import {Block, BlockMatchResult} from './block'
 import {any, last} from '../utils'
 import {DividerBlock, FencedCodeBlock, HeadingBlock, ParagraphBlock, TableBlock} from './leafBlocks'
 
@@ -127,7 +127,7 @@ export class QuoteBlock extends ContainerBlock {
 export type ListMarkerType = '-' | '+' | '*' | '.' | ')'
 
 export class ListItemBlock extends ContainerBlock {
-  private static readonly unorderedMarkerRegex = /^([-+*]) /
+  private static readonly unorderedMarkerRegex = /^([-+*]) (\[([ x])] )?/
   private static readonly orderedMarkerRegex = /^(\d{1,9})([.)]) /
 
   private _indent = 0
@@ -144,6 +144,8 @@ export class ListItemBlock extends ContainerBlock {
   isOrdered = true
   order = 0
   listMarkerType: ListMarkerType
+  isCheckbox = false
+  isChecked = false
 
   _isLoose: boolean | null = null
 
@@ -175,16 +177,20 @@ export class ListItemBlock extends ContainerBlock {
       const listItem = new ListItemBlock()
       listItem.indent = matchResult[0].length
       listItem.isOrdered = true
+      listItem.lines.push(lines[0].substring(matchResult[0].length))
       listItem.order = parseInt(matchResult[1], 10)
-      listItem.lines.push(lines[0])
       listItem.listMarkerType = matchResult[2]
       return [listItem, lines.slice(1)]
     } else if ((matchResult = lines[0].match(this.unorderedMarkerRegex))) {
       const listItem = new ListItemBlock()
-      listItem.indent = matchResult[0].length
+      listItem.indent = 2
       listItem.isOrdered = false
-      listItem.lines.push(lines[0])
+      listItem.lines.push(lines[0].substring(matchResult[0].length))
       listItem.listMarkerType = matchResult[1]
+      if (matchResult[2]) {
+        listItem.isCheckbox = true
+        listItem.isChecked = matchResult[3] === 'x'
+      }
       return [listItem, lines.slice(1)]
     } else {
       return null
@@ -201,7 +207,7 @@ export class ListItemBlock extends ContainerBlock {
         return lines.slice(1)
       }
     } else if (lines[0].match(this.indentRegex)) {
-      this.lines.push(lines[0])
+      this.lines.push(lines[0].replace(this.indentRegex, ''))
       return lines.slice(1)
     } else {
       this.close()
@@ -211,20 +217,12 @@ export class ListItemBlock extends ContainerBlock {
 
   close() {
     super.close()
-    const lines = []
-    lines.push(this.lines[0].replace(this.isOrdered ? ListItemBlock.orderedMarkerRegex : ListItemBlock.unorderedMarkerRegex, ''))
-    for (let i = 1; i < this.lines.length; i++) {
-      lines.push(this.lines[i].replace(this.indentRegex, ''))
-    }
-    this.children = this.constructChildren(lines)
+    this.children = this.constructChildren(this.lines)
   }
 
   render(parent: ListBlock): string {
-    if (parent.isLoose) {
-      return `<li>${this.renderChildren()}</li>\n`
-    } else {
-      return `<li>${this.renderChildren()}</li>\n`
-    }
+    const checkboxStr = this.isCheckbox ? `<input type='checkbox' ${this.isChecked ? 'checked' : ''}/>` : ''
+    return `<li>${checkboxStr}${this.renderChildren()}</li>\n`
   }
 }
 
