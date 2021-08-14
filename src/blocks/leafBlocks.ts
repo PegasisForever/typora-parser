@@ -295,3 +295,81 @@ export class FrontMatterBlock extends Block {
     return ''
   }
 }
+
+abstract class HTMLBlockCondition {
+  startRegex: RegExp
+  endRegex: RegExp
+
+  start(line: string): boolean {
+    return !!line.match(this.startRegex)
+  }
+
+  end(line: string): boolean {
+    return !!line.match(this.endRegex)
+  }
+}
+
+export class HTMLBlock extends Block {
+  // according to the conditions on https://spec.commonmark.org/0.30/#html-blocks.
+  // Some conditions are missing because typora doesn't support them.
+  private static readonly conditions: HTMLBlockCondition[] = [
+    // condition 1
+    new class extends HTMLBlockCondition {
+      startRegex = /^<(pre|script|style|textarea)( |\t|>|$)/i
+      endRegex = /<\/pre>|<\/script>|<\/style>|<\/textarea>/i
+    },
+    // condition 2
+    new class extends HTMLBlockCondition {
+      startRegex = /^<!--/
+      endRegex = /-->/
+    },
+    // condition 6
+    new class extends HTMLBlockCondition {
+      startRegex = /^<\/?address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h1|h2|h3|h4|h5|h6|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|section|source|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul( |\t|$|\/?>)/i
+      endRegex = /^$/
+    },
+  ]
+
+  condition: HTMLBlockCondition
+
+  static match(lines: string[]): BlockMatchResult {
+    for (const condition of this.conditions) {
+      if (condition.start(lines[0])) {
+        const htmlBlock = new HTMLBlock()
+        htmlBlock.condition = condition
+        htmlBlock.lines.push(lines[0])
+        if (condition.end(lines[0])) {
+          htmlBlock.close()
+          if (lines.length > 1 && lines[1] === '') {
+            return [htmlBlock, lines.slice(2)]
+          } else {
+            return [htmlBlock, lines.slice(1)]
+          }
+        } else {
+          return [htmlBlock, lines.slice(1)]
+        }
+      }
+    }
+
+    return null
+  }
+
+  append(lines: string[]): string[] | null {
+    if (this.condition.end(lines[0])) {
+      if (lines[0] !== '') this.lines.push(lines[0])
+      this.close()
+      if (lines.length > 1 && lines[1] === '') {
+        return lines.slice(2)
+      } else {
+        return lines.slice(1)
+      }
+    } else {
+      this.lines.push(lines[0])
+      return lines.slice(1)
+    }
+  }
+
+  render(parent: Block): string {
+    return this.lines.join('\n') + '\n'
+  }
+}
