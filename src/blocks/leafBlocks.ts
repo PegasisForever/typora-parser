@@ -1,6 +1,7 @@
 import {Block, BlockMatchResult} from './block'
 import {ListItemBlock} from './containerBlocks'
 import {any} from '../utils'
+import {LinkReference} from '../parser'
 
 export class ParagraphBlock extends Block {
   static match(lines: string[]): BlockMatchResult {
@@ -325,7 +326,7 @@ export class HTMLBlock extends Block {
     },
     // condition 6
     new class extends HTMLBlockCondition {
-      startRegex = /^<\/?address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h1|h2|h3|h4|h5|h6|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|section|source|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul( |\t|$|\/?>)/i
+      startRegex = /^<\/?(address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h1|h2|h3|h4|h5|h6|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|section|source|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)( |\t|$|\/?>)/i
       endRegex = /^$/
     },
   ]
@@ -371,5 +372,39 @@ export class HTMLBlock extends Block {
 
   render(parent: Block): string {
     return this.lines.join('\n') + '\n'
+  }
+}
+
+export class LinkRefDefBlock extends Block {
+  private static readonly regex = /^ {0,3}\[(.*?[^\\])] {0,3}: *([^ ]+)( *"(.*?[^\\])")?$/
+  label: string
+  def: LinkReference
+
+  static match(lines: string[]): BlockMatchResult {
+    const matchResult = lines[0].match(this.regex)
+    if (matchResult) {
+      const def = {
+        destination: matchResult[2],
+        title: matchResult[4],
+      }
+      const defBlock = new LinkRefDefBlock()
+      defBlock.label = matchResult[1]
+      defBlock.def = def
+      defBlock.close()
+
+      if (lines.length > 1 && lines[1] === '') {
+        return [defBlock, lines.slice(2)]
+      } else {
+        return [defBlock, lines.slice(1)]
+      }
+    }
+  }
+
+  append(lines: string[]): string[] | null {
+    return null
+  }
+
+  render(parent: Block): string {
+    return ''
   }
 }
