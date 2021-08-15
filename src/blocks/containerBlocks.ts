@@ -8,6 +8,7 @@ import {
   LinkRefDefBlock,
   ParagraphBlock,
   TableBlock,
+  TOCBlock,
 } from './leafBlocks'
 
 export abstract class ContainerBlock extends Block {
@@ -19,6 +20,7 @@ export abstract class ContainerBlock extends Block {
       ListBlock,
       TableBlock,
       LinkRefDefBlock,
+      TOCBlock,
       HTMLBlock,
       FencedCodeBlock,
       HeadingBlock,

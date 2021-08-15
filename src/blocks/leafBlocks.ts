@@ -408,3 +408,29 @@ export class LinkRefDefBlock extends Block {
     return ''
   }
 }
+
+export class TOCBlock extends Block {
+  private static readonly regex = /^ *\[toc] *$/i
+
+  static match(lines: string[]): BlockMatchResult {
+    if (lines[0].match(this.regex)) {
+      const toc = new TOCBlock()
+      toc.close()
+      if (lines.length > 1 && lines[1] === '') {
+        return [toc, lines.slice(2)]
+      } else {
+        return [toc, lines.slice(1)]
+      }
+    } else {
+      return null
+    }
+  }
+
+  append(lines: string[]): string[] | null {
+    return null
+  }
+
+  render(parent: Block): string {
+    return `<div>[TOC]</div>\n`
+  }
+}
