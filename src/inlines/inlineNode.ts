@@ -94,7 +94,47 @@ export class AutolinkNode extends InlineNode {
       return `<a href='${this.text}' target='_blank' class='url'>${this.text}</a>`
     }
   }
+}
 
+export class RawHTMLNode extends InlineNode {
+  private static readonly tagNameRegex = '([a-z][a-z0-9\\-]*)'
+  private static readonly attributeNameRegex = '([a-z_:][a-z0-9_\\.:\\-]*)'
+  private static readonly attributeValueRegex = '(([^\\s"\'=<>`]+)|(\'[^\']*\')|("[^"]*"))'
+  private static readonly attributeValueSpecificationRegex = `(\\s*=\\s*${RawHTMLNode.attributeValueRegex})`
+  private static readonly attributeRegex = `(\\s+${RawHTMLNode.attributeNameRegex}${RawHTMLNode.attributeValueSpecificationRegex}?)`
+  private static readonly openTagRegex = new RegExp(`^<${RawHTMLNode.tagNameRegex}${RawHTMLNode.attributeRegex}*\\s*/?>`, 'i')
+  private static readonly closeTagRegex = new RegExp(`^</${RawHTMLNode.tagNameRegex}\\s*>`, 'i')
+  private static readonly htmlCommentRegex = /^<!--.*?-->/
+  private static readonly processingInstructionRegex = /^<\?.*?\?>/
+  private static readonly cdataSectionRegex = /^<!\[CDATA\[.*?]]>/
+  private static readonly htmlTagRegexes = [
+    RawHTMLNode.openTagRegex,
+    RawHTMLNode.closeTagRegex,
+    RawHTMLNode.htmlCommentRegex,
+    RawHTMLNode.processingInstructionRegex,
+    RawHTMLNode.cdataSectionRegex,
+  ]
+
+  static match(line: string): InlineNodeMatchResult | null {
+    for (const regex of RawHTMLNode.htmlTagRegexes) {
+      const matchResult = line.match(regex)
+      if (matchResult) {
+        return {
+          node: new RawHTMLNode(matchResult[0]),
+          remaining: line.substring(matchResult[0].length),
+        }
+      }
+    }
+    return null
+  }
+
+  rawText(): string {
+    return this.text
+  }
+
+  render(): string {
+    return this.text
+  }
 }
 
 export abstract class ContainerInlineNode extends InlineNode {
@@ -105,6 +145,7 @@ export abstract class ContainerInlineNode extends InlineNode {
       CodeSpanNode,
       LinkNode,
       AutolinkNode,
+      RawHTMLNode,
       EmphNode.EmphNode,
     ]
 
