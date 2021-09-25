@@ -1,6 +1,8 @@
 import {parseNestedBrackets} from './parseNestedBrackets'
+import {isLeftDelimiter, isRightDelimiter} from './parseDelimiter'
+import {last} from '../utils'
 
-export type InlineNodeMatchResult<T extends InlineNode> = { node?: T, remaining?: string }
+export type InlineNodeMatchResult = { node?: InlineNode | InlineNode[], remaining?: string }
 
 export abstract class InlineNode {
   constructor(
@@ -24,6 +26,22 @@ export class TextNode extends InlineNode {
 }
 
 export class CodeSpanNode extends InlineNode {
+  private static readonly backtickRegex = /^`+/
+
+  static match(line: string): InlineNodeMatchResult {
+    let backtickStr = line.match(this.backtickRegex)?.[0]
+    if (!backtickStr) return {}
+    let {parsed, remaining} = parseNestedBrackets(line, backtickStr, backtickStr)
+    if (parsed) {
+      return {
+        node: new CodeSpanNode(parsed),
+        remaining,
+      }
+    } else {
+      return {}
+    }
+  }
+
   rawText(parent: InlineNode): string {
     return this.text
   }
@@ -39,7 +57,9 @@ export abstract class ContainerInlineNode extends InlineNode {
 
   protected constructChildren(text: string): InlineNode[] {
     const inlineNodeTypes = [
+      CodeSpanNode,
       LinkNode,
+      EmphNode,
     ]
 
     const inlineNodes: InlineNode[] = []
@@ -54,7 +74,11 @@ export abstract class ContainerInlineNode extends InlineNode {
               inlineNodes.push(new TextNode(buffer))
               buffer = ''
             }
-            inlineNodes.push(node)
+            if (node instanceof InlineNode) {
+              inlineNodes.push(node)
+            } else {
+              inlineNodes.push(...node)
+            }
             text = remaining
             continue out
           }
@@ -88,9 +112,103 @@ export class RootNode extends ContainerInlineNode {
   }
 }
 
-export class BoldNode extends ContainerInlineNode {
+enum EmphasisType {
+  NONE,
+  ITALIC,
+  BOLD,
+}
+
+enum DelimiterFlanking {
+  LEFT,
+  RIGHT,
+}
+
+type DelimiterChar = '*' | '_'
+
+export class EmphNode extends ContainerInlineNode {
+  constructor(
+    text: string,
+    public emphasisType: EmphasisType,
+  ) {
+    super(text)
+    this.children = this.constructChildren(text)
+  }
+
+  private static toDelimiterChar(str: string): DelimiterChar | undefined {
+    if (str === '*' || str === '_') {
+      return str
+    } else {
+      return undefined
+    }
+  }
+
+  private static findFirstDelimiter(str: string, flanking: DelimiterFlanking, findBeforeI: number = Infinity, delimiterRun?: string): { before: string, delimiterRun: string, after: string } | undefined {
+    let i = 0
+    while (i <= str.length) {
+      let delimiterChar: DelimiterChar | undefined
+      while (delimiterChar === undefined) {
+        if (i >= findBeforeI) return undefined
+        if (i >= str.length) return undefined
+        delimiterChar = this.toDelimiterChar(str[i])
+        i++
+      }
+      const before = str.substring(0, i - 1)
+
+      let delimiterCount = 1
+      while (str[i] === delimiterChar) {
+        delimiterCount++
+        i++
+      }
+
+      const result = {
+        before,
+        delimiterRun: delimiterChar.repeat(delimiterCount),
+        after: str.substring(i),
+      }
+
+      const flankingTestFunction = flanking === DelimiterFlanking.LEFT ? isLeftDelimiter : isRightDelimiter
+      if ((delimiterRun === undefined || result.delimiterRun === delimiterRun) && flankingTestFunction(last(before) ?? '', result.delimiterRun, result.after[0] ?? '')) {
+        return result
+      }
+    }
+  }
+
+  static match(line: string): InlineNodeMatchResult {
+    const leftDelimiterResult = this.findFirstDelimiter(line, DelimiterFlanking.LEFT, 2)
+    if (!leftDelimiterResult) return {}
+    let {before: beforeLeft, delimiterRun, after: afterLeft} = leftDelimiterResult
+
+    let emphasisType = EmphasisType.NONE
+    if (delimiterRun.length === 1) {
+      emphasisType = EmphasisType.ITALIC
+    } else if (delimiterRun.length === 2) {
+      emphasisType = EmphasisType.BOLD
+    } else {
+      // TODO
+    }
+
+    if (emphasisType === EmphasisType.NONE) {
+      // TODO
+    }
+
+    const rightDelimiterResult = this.findFirstDelimiter(afterLeft, DelimiterFlanking.RIGHT, Infinity, delimiterRun)
+    if (rightDelimiterResult) {
+      let {before: emphasised, after: afterRight} = rightDelimiterResult
+      return {
+        node: [new TextNode(beforeLeft), new EmphNode(emphasised, emphasisType)],
+        remaining: afterRight,
+      }
+    } else {
+      return {
+        node: new TextNode(beforeLeft + delimiterRun),
+        remaining: afterLeft,
+      }
+    }
+  }
+
   render(parent: InlineNode): string {
-    return `<strong>${super.render(parent)}</strong>`
+    const tag = this.emphasisType === EmphasisType.ITALIC ? 'em' : 'strong'
+    return `<${tag}>${super.render(parent)}</${tag}>`
   }
 }
 
@@ -104,7 +222,7 @@ export class ItalicNode extends ContainerInlineNode {
 // priority lower than code spans, auto links, raw html tags
 //          higher than emphasis and strong emphasis
 class LinkTextNode extends ContainerInlineNode {
-  static match(line: string): InlineNodeMatchResult<LinkTextNode> {
+  static match(line: string): InlineNodeMatchResult {
     const {parsed, remaining} = parseNestedBrackets(line, '[', ']')
     if (parsed) {
       return {
@@ -127,7 +245,7 @@ class LinkDestinationNode extends ContainerInlineNode {
 
   private static readonly destinationTitleRegex = /^(.*?)(( '(.*[^\\])')|( "(.*[^\\])"))?$/
 
-  static match(line: string): InlineNodeMatchResult<LinkDestinationNode> {
+  static match(line: string): InlineNodeMatchResult {
     const {parsed, remaining} = parseNestedBrackets(line, '(', ')')
     if (parsed) {
       const matchResult = parsed.match(this.destinationTitleRegex)
@@ -158,14 +276,14 @@ export class LinkNode extends ContainerInlineNode {
     return this.children[1] as LinkDestinationNode
   }
 
-  static match(line: string): InlineNodeMatchResult<LinkNode> {
+  static match(line: string): InlineNodeMatchResult {
     const {node: linkTextNode, remaining: r1} = LinkTextNode.match(line)
     if (r1 === undefined) return {}
     const {node: linkDestinationNode, remaining: r2} = LinkDestinationNode.match(r1)
     if (r2 === undefined) return {}
 
     return {
-      node: new LinkNode(linkTextNode, linkDestinationNode),
+      node: new LinkNode(linkTextNode as LinkTextNode, linkDestinationNode as LinkDestinationNode),
       remaining: r2,
     }
   }

@@ -8,6 +8,7 @@ import {inlineParser} from './inlines/inlineParser'
 
   const rootNode = inlineParser(md.replaceAll('\n', ''))
   console.log(inspect(rootNode, false, null, true))
+  console.log(rootNode.render(undefined))
   return
 
   const parseResult = parse(md)
