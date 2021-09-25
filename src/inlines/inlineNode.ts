@@ -1,5 +1,4 @@
 import {parseNestedBrackets} from './parseNestedBrackets'
-import {isLeftDelimiter, isRightDelimiter} from './parseDelimiter'
 import {last} from '../utils'
 
 export type InlineNodeMatchResult = { node?: InlineNode | InlineNode[], remaining?: string }
@@ -59,7 +58,7 @@ export abstract class ContainerInlineNode extends InlineNode {
     const inlineNodeTypes = [
       CodeSpanNode,
       LinkNode,
-      EmphNode,
+      EmphNode.EmphNode,
     ]
 
     const inlineNodes: InlineNode[] = []
@@ -112,29 +111,76 @@ export class RootNode extends ContainerInlineNode {
   }
 }
 
-enum EmphasisType {
-  NONE,
-  ITALIC,
-  BOLD,
-}
-
-enum DelimiterFlanking {
-  LEFT,
-  RIGHT,
-}
-
-type DelimiterChar = '*' | '_'
-
-export class EmphNode extends ContainerInlineNode {
-  constructor(
-    text: string,
-    public emphasisType: EmphasisType,
-  ) {
-    super(text)
-    this.children = this.constructChildren(text)
+namespace EmphNode {
+  enum EmphasisType {
+    NONE,
+    ITALIC,
+    BOLD,
   }
 
-  private static toDelimiterChar(str: string): DelimiterChar | undefined {
+  enum DelimiterFlanking {
+    LEFT,
+    RIGHT,
+  }
+
+  type DelimiterChar = '*' | '_'
+  type FindDelimiterResult = { before: string, delimiterRun: string, after: string }
+
+  const punctuationRegex = /[!"#$%&'()+,-./:;<=>?@\[\\\]^_`{|}~]/
+  const whiteSpaceRegex = /\s|^$/
+
+  function analyzeBeforeAfterChar(beforeChar: string, afterChar: string): { bWhiteSpace: boolean, bPunctuation: boolean, aWhiteSpace: boolean, aPunctuation: boolean } {
+    return {
+      bWhiteSpace: !!beforeChar.match(whiteSpaceRegex),
+      bPunctuation: !!beforeChar.match(punctuationRegex),
+      aWhiteSpace: !!afterChar.match(whiteSpaceRegex),
+      aPunctuation: !!afterChar.match(punctuationRegex),
+    }
+  }
+
+  function isLeftDelimiter(beforeChar: string, delimiterRun: string, afterChar: string): boolean {
+    let {bWhiteSpace, bPunctuation, aWhiteSpace, aPunctuation} = analyzeBeforeAfterChar(beforeChar, afterChar)
+
+    // no intraword "_" emphasis
+    if (delimiterRun[0] === '_' && !bWhiteSpace && !bPunctuation && !aWhiteSpace && !aPunctuation) {
+      return false
+    }
+
+    // preceded by whitespace or punctuation, followed by punctuation
+    if ((bWhiteSpace || bPunctuation) && aPunctuation) {
+      return true
+    }
+
+    // not followed by whitespace or punctuation
+    if (!aWhiteSpace && !aPunctuation) {
+      return true
+    }
+
+    return false
+  }
+
+  function isRightDelimiter(beforeChar: string, delimiterRun: string, afterChar: string): boolean {
+    let {bWhiteSpace, bPunctuation, aWhiteSpace, aPunctuation} = analyzeBeforeAfterChar(beforeChar, afterChar)
+
+    // no intraword "_" emphasis
+    if (delimiterRun[0] === '_' && !bWhiteSpace && !bPunctuation && !aWhiteSpace && !aPunctuation) {
+      return false
+    }
+
+    // preceded by punctuation, followed by whitespace or punctuation
+    if (bPunctuation && (aWhiteSpace || aPunctuation)) {
+      return true
+    }
+
+    // not preceded by whitespace or punctuation
+    if (!bWhiteSpace && !bPunctuation) {
+      return true
+    }
+
+    return false
+  }
+
+  function toDelimiterChar(str: string): DelimiterChar | undefined {
     if (str === '*' || str === '_') {
       return str
     } else {
@@ -142,22 +188,27 @@ export class EmphNode extends ContainerInlineNode {
     }
   }
 
-  private static findFirstDelimiter(str: string, flanking: DelimiterFlanking, findBeforeI: number = Infinity, delimiterRun?: string): { before: string, delimiterRun: string, after: string } | undefined {
+  function findFirstDelimiter(str: string, flanking: DelimiterFlanking, delimiterRun?: string, inputDelimiterChar?: DelimiterChar, findBeforeI: number = Infinity, allowSplitDelimiterRun?: boolean): FindDelimiterResult | undefined {
     let i = 0
     while (i <= str.length) {
       let delimiterChar: DelimiterChar | undefined
       while (delimiterChar === undefined) {
         if (i >= findBeforeI) return undefined
         if (i >= str.length) return undefined
-        delimiterChar = this.toDelimiterChar(str[i])
+        delimiterChar = toDelimiterChar(str[i])
+        if (inputDelimiterChar !== undefined && delimiterChar !== inputDelimiterChar) delimiterChar = undefined
         i++
       }
-      const before = str.substring(0, i - 1)
+      let before = str.substring(0, i - 1)
 
       let delimiterCount = 1
       while (str[i] === delimiterChar) {
         delimiterCount++
         i++
+      }
+      if (allowSplitDelimiterRun && delimiterRun && delimiterCount > delimiterRun.length) {
+        before += delimiterChar.repeat(delimiterCount - delimiterRun.length)
+        delimiterCount = delimiterRun.length
       }
 
       const result = {
@@ -173,48 +224,81 @@ export class EmphNode extends ContainerInlineNode {
     }
   }
 
-  static match(line: string): InlineNodeMatchResult {
-    const leftDelimiterResult = this.findFirstDelimiter(line, DelimiterFlanking.LEFT, 2)
-    if (!leftDelimiterResult) return {}
-    let {before: beforeLeft, delimiterRun, after: afterLeft} = leftDelimiterResult
-
-    let emphasisType = EmphasisType.NONE
-    if (delimiterRun.length === 1) {
-      emphasisType = EmphasisType.ITALIC
-    } else if (delimiterRun.length === 2) {
-      emphasisType = EmphasisType.BOLD
-    } else {
-      // TODO
+  export class EmphNode extends ContainerInlineNode {
+    constructor(
+      text: string,
+      public emphasisType: EmphasisType,
+    ) {
+      super(text)
+      this.children = this.constructChildren(text)
     }
 
-    if (emphasisType === EmphasisType.NONE) {
-      // TODO
-    }
+    static match(line: string): InlineNodeMatchResult {
+      const leftDelimiterResult = findFirstDelimiter(line, DelimiterFlanking.LEFT, undefined, undefined, 2)
+      if (!leftDelimiterResult) return {}
+      let {before: beforeLeft, delimiterRun, after: afterLeft} = leftDelimiterResult
 
-    const rightDelimiterResult = this.findFirstDelimiter(afterLeft, DelimiterFlanking.RIGHT, Infinity, delimiterRun)
-    if (rightDelimiterResult) {
-      let {before: emphasised, after: afterRight} = rightDelimiterResult
-      return {
-        node: [new TextNode(beforeLeft), new EmphNode(emphasised, emphasisType)],
-        remaining: afterRight,
+      let nearest2RightDelimiter: Array<FindDelimiterResult | null> = [null, null]
+      {
+        nearest2RightDelimiter[0] = findFirstDelimiter(afterLeft, DelimiterFlanking.RIGHT, undefined, delimiterRun[0] as DelimiterChar)
+        if (nearest2RightDelimiter[0]) {
+          nearest2RightDelimiter[1] = findFirstDelimiter(nearest2RightDelimiter[0].after, DelimiterFlanking.RIGHT, undefined, delimiterRun[0] as DelimiterChar)
+        }
       }
-    } else {
-      return {
-        node: new TextNode(beforeLeft + delimiterRun),
-        remaining: afterLeft,
+
+      function checkDelimiterLength(a: number, b: number, c: number): boolean {
+        return delimiterRun.length === a && nearest2RightDelimiter[0]?.delimiterRun?.length === b && nearest2RightDelimiter[1]?.delimiterRun?.length === c
+      }
+
+      if (checkDelimiterLength(1, 2, 3) || checkDelimiterLength(3, 2, 1)) {
+        // *a**b*** or ***a**b*
+        return {
+          node: [new TextNode(beforeLeft), new EmphNode(line.substring(beforeLeft.length + 1, line.length - nearest2RightDelimiter[1]!.after.length - 1), EmphasisType.ITALIC)],
+          remaining: nearest2RightDelimiter[1]!.after,
+        }
+      } else if (checkDelimiterLength(2, 1, 3) || checkDelimiterLength(3, 1, 2)) {
+        // **a*b*** or ***a*b**
+        return {
+          node: [new TextNode(beforeLeft), new EmphNode(line.substring(beforeLeft.length + 2, line.length - nearest2RightDelimiter[1]!.after.length - 2), EmphasisType.BOLD)],
+          remaining: nearest2RightDelimiter[1]!.after,
+        }
+      }
+
+      if (delimiterRun.length >= 4) {
+        return {
+          node: new TextNode(beforeLeft + delimiterRun),
+          remaining: afterLeft,
+        }
+      }
+
+      const rightDelimiterResult = findFirstDelimiter(afterLeft, DelimiterFlanking.RIGHT, delimiterRun) ?? findFirstDelimiter(afterLeft, DelimiterFlanking.RIGHT, delimiterRun, undefined, Infinity, true)
+      if (rightDelimiterResult) {
+        let {before: emphasised, after: afterRight} = rightDelimiterResult
+        if (delimiterRun.length === 3) {
+          const node = new EmphNode('', EmphasisType.ITALIC)
+          node.children.push(new EmphNode(emphasised, EmphasisType.BOLD))
+          return {
+            node: [new TextNode(beforeLeft), node],
+            remaining: afterRight,
+          }
+        } else {
+          return {
+            node: [new TextNode(beforeLeft), new EmphNode(emphasised, delimiterRun.length === 1 ? EmphasisType.ITALIC : EmphasisType.BOLD)],
+            remaining: afterRight,
+          }
+        }
+      } else {
+        return {
+          node: new TextNode(beforeLeft + delimiterRun),
+          remaining: afterLeft,
+        }
       }
     }
-  }
 
-  render(parent: InlineNode): string {
-    const tag = this.emphasisType === EmphasisType.ITALIC ? 'em' : 'strong'
-    return `<${tag}>${super.render(parent)}</${tag}>`
-  }
-}
-
-export class ItalicNode extends ContainerInlineNode {
-  render(parent: InlineNode): string {
-    return `<em>${super.render(parent)}</em>`
+    render(parent: InlineNode): string {
+      const tag = this.emphasisType === EmphasisType.ITALIC ? 'em' : 'strong'
+      return `<${tag}>${super.render(parent)}</${tag}>`
+    }
   }
 }
 
