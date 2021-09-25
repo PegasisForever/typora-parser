@@ -1,4 +1,4 @@
-import {parseNestedBrackets} from './parseNestedBrackets'
+import {parseNestedBrackets, ParseNestedBracketsResult} from './parseNestedBrackets'
 import {last} from '../utils'
 
 export type InlineNodeMatchResult = { node: InlineNode | InlineNode[], remaining: string }
@@ -308,12 +308,28 @@ namespace EmphNode {
 // priority lower than code spans, auto links, raw html tags
 //          higher than emphasis and strong emphasis
 class LinkTextNode extends ContainerInlineNode {
+  constructor(
+    text: string,
+    public isImage: boolean,
+  ) {
+    super(text)
+    this.children = this.constructChildren(text)
+  }
+
   static match(line: string): InlineNodeMatchResult | null {
-    const parseResult = parseNestedBrackets(line, '[', ']')
+    let isImage: boolean
+    let parseResult: ParseNestedBracketsResult | null
+    if (line[0] === '!') {
+      isImage = true
+      parseResult = parseNestedBrackets(line.substring(1), '[', ']')
+    } else {
+      isImage = false
+      parseResult = parseNestedBrackets(line, '[', ']')
+    }
     if (!parseResult) return null
     const {parsed, remaining} = parseResult
     return {
-      node: new LinkTextNode(parsed),
+      node: new LinkTextNode(parsed, isImage),
       remaining,
     }
   }
@@ -373,8 +389,17 @@ export class LinkNode extends ContainerInlineNode {
   }
 
   render(): string {
-    const hrefText = ` href='${this.linkDestinationNode.destination}'`
-    const titleText = this.linkDestinationNode.title ? ` title='${this.linkDestinationNode.title}'` : ''
-    return `<a${hrefText}${titleText}>${this.linkTextNode.render(this)}</a>`
+    if (this.linkTextNode.isImage) {
+      const srcText = ` src="${this.linkDestinationNode.destination}"`
+      const altText = this.linkTextNode.text ? ` alt="${this.linkTextNode.text}"` : ''
+      const titleText = this.linkDestinationNode.title ? ` title="${this.linkDestinationNode.title}"` : ''
+
+      return `<img${srcText} referrerpolicy="no-referrer"${altText}${titleText}>`
+    } else {
+      const hrefText = ` href='${this.linkDestinationNode.destination}'`
+      const titleText = this.linkDestinationNode.title ? ` title='${this.linkDestinationNode.title}'` : ''
+
+      return `<a${hrefText}${titleText}>${this.linkTextNode.render(this)}</a>`
+    }
   }
 }

@@ -1,6 +1,8 @@
 import {last} from '../utils'
 
-export function parseNestedBrackets(line: string, startChar: string, endChar: string): { parsed: string, remaining: string } | null {
+export type ParseNestedBracketsResult = { parsed: string, remaining: string }
+
+export function parseNestedBrackets(line: string, startChar: string, endChar: string): ParseNestedBracketsResult | null {
   let parsed = ''
   let isEscape = false
   let i = 0
