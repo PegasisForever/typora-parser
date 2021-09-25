@@ -27,8 +27,8 @@ export abstract class ContainerBlock extends Block {
       DividerBlock,
       ParagraphBlock,
     ]
-    let blockTypesExceptParagraph = blockTypes.filter(it => it !== ParagraphBlock)
-    let children: Block[] = []
+    const blockTypesExceptParagraph = blockTypes.filter(it => it !== ParagraphBlock)
+    const children: Block[] = []
     out:
       while (lines.length > 0) {
         // if last children is an open paragraph
@@ -36,7 +36,7 @@ export abstract class ContainerBlock extends Block {
 
           // if any other block type matches this new line, close the paragraph
           for (const blockType of blockTypesExceptParagraph) {
-            let matchResult = blockType.match(lines)
+            const matchResult = blockType.match(lines)
             if (matchResult) {
               last(children).close()
               children.push(matchResult[0])
@@ -59,7 +59,7 @@ export abstract class ContainerBlock extends Block {
 
           // try to find a block type that matches the new line
           for (const blockType of blockTypes) {
-            let matchResult = blockType.match(lines)
+            const matchResult = blockType.match(lines)
             if (matchResult) {
               children.push(matchResult[0])
               lines = matchResult[1]
@@ -85,7 +85,7 @@ export class RootBlock extends ContainerBlock {
     this.lines = lines
   }
 
-  close() {
+  close(): void {
     super.close()
     this.children = this.constructChildren(this.lines)
   }
@@ -103,11 +103,14 @@ export class RootBlock extends ContainerBlock {
 export class QuoteBlock extends ContainerBlock {
   private static readonly quoteMarkerRegex = /^ {0,3}> ?/
 
-  static match(lines: string[]): BlockMatchResult {
+  static match(lines: string[]): BlockMatchResult | null {
     if (lines[0].match(this.quoteMarkerRegex)) {
       const quote = new QuoteBlock()
       quote.lines.push(lines[0])
-      return [quote, lines.slice(1)]
+      return {
+        block: quote,
+        remaining: lines.slice(1),
+      }
     } else {
       return null
     }
@@ -124,13 +127,13 @@ export class QuoteBlock extends ContainerBlock {
     }
   }
 
-  close() {
+  close(): void {
     super.close()
     const lines = this.lines.map(it => it.replace(QuoteBlock.quoteMarkerRegex, ''))
     this.children = this.constructChildren(lines)
   }
 
-  render(parent: Block): string {
+  render(): string {
     return `<blockquote>${this.renderChildren()}</blockquote>\n`
   }
 }
@@ -142,12 +145,12 @@ export class ListItemBlock extends ContainerBlock {
   private static readonly orderedMarkerRegex = /^(\d{1,9})([.)]) /
 
   private _indent = 0
-  set indent(value) {
+  set indent(value: number) {
     this._indent = value
     this.indentRegex = new RegExp(`^ {${this.indent}}`)
   }
 
-  get indent() {
+  get indent(): number {
     return this._indent
   }
 
@@ -164,7 +167,7 @@ export class ListItemBlock extends ContainerBlock {
     this._isLoose = value
   }
 
-  get isLoose() {
+  get isLoose(): boolean {
     if (!this._isLoose) {
       if (this.children.length === 1 && this.children[0] instanceof ParagraphBlock) {
         this._isLoose = false
@@ -182,7 +185,7 @@ export class ListItemBlock extends ContainerBlock {
     return this._isLoose
   }
 
-  static match(lines: string[]): BlockMatchResult {
+  static match(lines: string[]): BlockMatchResult | null {
     let matchResult
     if ((matchResult = lines[0].match(this.orderedMarkerRegex))) {
       const listItem = new ListItemBlock()
@@ -191,7 +194,10 @@ export class ListItemBlock extends ContainerBlock {
       listItem.lines.push(lines[0].substring(matchResult[0].length))
       listItem.order = parseInt(matchResult[1], 10)
       listItem.listMarkerType = matchResult[2]
-      return [listItem, lines.slice(1)]
+      return {
+        block: listItem,
+        remaining: lines.slice(1),
+      }
     } else if ((matchResult = lines[0].match(this.unorderedMarkerRegex))) {
       const listItem = new ListItemBlock()
       listItem.indent = 2
@@ -202,7 +208,10 @@ export class ListItemBlock extends ContainerBlock {
         listItem.isCheckbox = true
         listItem.isChecked = matchResult[3] === 'x'
       }
-      return [listItem, lines.slice(1)]
+      return {
+        block: listItem,
+        remaining: lines.slice(1),
+      }
     } else {
       return null
     }
@@ -226,12 +235,12 @@ export class ListItemBlock extends ContainerBlock {
     }
   }
 
-  close() {
+  close(): void {
     super.close()
     this.children = this.constructChildren(this.lines)
   }
 
-  render(parent: ListBlock): string {
+  render(): string {
     const checkboxStr = this.isCheckbox ? `<input type='checkbox' ${this.isChecked ? 'checked' : ''}/>` : ''
     return `<li>${checkboxStr}${this.renderChildren()}</li>\n`
   }
@@ -249,18 +258,18 @@ export class ListBlock extends ContainerBlock {
     }
   }
 
-  get isLoose() {
+  get isLoose(): boolean {
     if (!this._isLoose) {
       this._isLoose = any(this.children, it => it.isLoose)
     }
     return this._isLoose
   }
 
-  get startNumber() {
+  get startNumber(): number {
     return this.children[0].order
   }
 
-  get isOrdered() {
+  get isOrdered(): boolean {
     return this.children[0].isOrdered
   }
 
@@ -268,12 +277,15 @@ export class ListBlock extends ContainerBlock {
     return this.children[0].listMarkerType
   }
 
-  static match(lines: string[]): BlockMatchResult {
+  static match(lines: string[]): BlockMatchResult | null {
     const matchResult = ListItemBlock.match(lines)
     if (matchResult) {
       const listBlock = new ListBlock()
       listBlock.children.push(matchResult[0] as ListItemBlock)
-      return [listBlock, matchResult[1]]
+      return {
+        block: listBlock,
+        remaining: matchResult[1],
+      }
     } else {
       return null
     }
@@ -301,13 +313,14 @@ export class ListBlock extends ContainerBlock {
     return null
   }
 
-  close() {
+  close(): void {
     super.close()
     if (last(this.children).isOpen) last(this.children).close()
+    // eslint-disable-next-line no-self-assign
     this.isLoose = this.isLoose
   }
 
-  render(parent: Block): string {
+  render(): string {
     if (this.isOrdered) {
       const startStr = this.startNumber !== 1 ? ` start='${this.startNumber}' ` : ''
       return `<ol${startStr}>\n${this.renderChildren()}\n</ol>\n`

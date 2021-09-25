@@ -21,16 +21,15 @@ export type LinkReference = {
 export default function parse(markdown: string): MarkdownParseResult {
   let lines = markdown.split('\n')
 
-  const processResult = FrontMatterBlock.process(lines)
-  lines = processResult[0]
-  const frontMatter = processResult[1]
+  const {frontMatter, remaining} = FrontMatterBlock.process(lines)
+  lines = remaining
 
   const rootBlock = new RootBlock(lines)
   rootBlock.close()
 
   const linkReferences = new Map<string, LinkReference>()
   {
-    function walk(block: Block) {
+    const walk = function (block: Block) {
       if (block instanceof LinkRefDefBlock) {
         linkReferences.set(block.label, block.def)
       } else if (block instanceof ContainerBlock) {

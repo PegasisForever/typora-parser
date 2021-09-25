@@ -1,6 +1,6 @@
 export function last<T>(array: T[]): T
 export function last(array: string): string
-export function last<T>(array: any): T {
+export function last<T>(array: { length: number }): T {
   return array[array.length - 1]
 }
 

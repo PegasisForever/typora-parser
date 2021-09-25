@@ -4,14 +4,20 @@ import {any} from '../utils'
 import {LinkReference} from '../parser'
 
 export class ParagraphBlock extends Block {
-  static match(lines: string[]): BlockMatchResult {
+  static match(lines: string[]): BlockMatchResult | null {
     const paragraph = new ParagraphBlock()
     if (lines.length >= 2 && lines[0] === '' && lines[1] === '') {
       paragraph.close()
-      return [paragraph, lines.slice(2)]
+      return {
+        block: paragraph,
+        remaining: lines.slice(2),
+      }
     } else {
       paragraph.lines.push(lines[0])
-      return [paragraph, lines.slice(1)]
+      return {
+        block: paragraph,
+        remaining: lines.slice(1),
+      }
     }
   }
 
@@ -32,7 +38,7 @@ export class ParagraphBlock extends Block {
       return this.renderChildren()
     } else {
       if (this.lines.length === 0 || (this.lines.length === 1 && this.lines[0] === '')) {
-        return `<p>&nbsp;</p>\n`
+        return '<p>&nbsp;</p>\n'
       } else {
         return `<p>${this.renderChildren()}</p>\n`
       }
@@ -43,23 +49,26 @@ export class ParagraphBlock extends Block {
 export class DividerBlock extends Block {
   private static readonly regex = /^ {0,3}((\*[ \t]*){3,}|(-[ \t]*){3,}|(_[ \t]*){3,})$/
 
-  static match(lines: string[]): BlockMatchResult {
+  static match(lines: string[]): BlockMatchResult | null {
     if (lines.length >= 2 && lines[1] === '' && lines[0].match(this.regex)) {
       const divider = new DividerBlock()
       divider.lines.push(lines[0])
       divider.close()
-      return [divider, lines.slice(2)]
+      return {
+        block: divider,
+        remaining: lines.slice(2),
+      }
     } else {
       return null
     }
   }
 
-  append(lines: string[]): string[] | null {
+  append(): string[] | null {
     return null
   }
 
-  render(parent: Block): string {
-    return `<hr />\n`
+  render(): string {
+    return '<hr />\n'
   }
 }
 
@@ -68,7 +77,7 @@ export class HeadingBlock extends Block {
   content = ''
   level: 1 | 2 | 3 | 4 | 5 | 6
 
-  static match(lines: string[]): BlockMatchResult {
+  static match(lines: string[]): BlockMatchResult | null {
     let regexMatchResult
     if (lines.length >= 2 && lines[1] === '' && (regexMatchResult = lines[0].match(this.regex))) {
       const heading = new HeadingBlock()
@@ -76,13 +85,16 @@ export class HeadingBlock extends Block {
       heading.content = regexMatchResult[2]
       heading.level = regexMatchResult[1].length
       heading.close()
-      return [heading, lines.slice(2)]
+      return {
+        block: heading,
+        remaining: lines.slice(2),
+      }
     } else {
       return null
     }
   }
 
-  append(lines: string[]): string[] | null {
+  append(): string[] | null {
     return null
   }
 
@@ -90,7 +102,7 @@ export class HeadingBlock extends Block {
     return this.content
   }
 
-  render(parent: Block): string {
+  render(): string {
     return `<h${this.level} id='${this.content.replaceAll(' ', '-').toLowerCase()}'>${this.renderChildren()}</h${this.level}>\n`
   }
 }
@@ -100,26 +112,29 @@ export class FencedCodeBlock extends Block {
   private _indent = 0
   private indentRegex: RegExp
 
-  set indent(value) {
+  set indent(value: number) {
     this._indent = value
     this.indentRegex = new RegExp(`^ {0,${this.indent}}`)
   }
 
-  get indent() {
+  get indent(): number {
     return this._indent
   }
 
   startToken = ''
   infoString = ''
 
-  static match(lines: string[]): BlockMatchResult {
-    let regexMatchResult = lines[0].match(this.startRegex)
+  static match(lines: string[]): BlockMatchResult | null {
+    const regexMatchResult = lines[0].match(this.startRegex)
     if (regexMatchResult) {
       const fencedCode = new FencedCodeBlock()
       fencedCode.indent = regexMatchResult[1].length
       fencedCode.startToken = regexMatchResult[2]
       fencedCode.infoString = regexMatchResult[3]
-      return [fencedCode, lines.slice(1)]
+      return {
+        block: fencedCode,
+        remaining: lines.slice(1),
+      }
     } else {
       return null
     }
@@ -144,7 +159,7 @@ export class FencedCodeBlock extends Block {
     return this.lines.join('\n') + '\n'
   }
 
-  render(parent: Block): string {
+  render(): string {
     return `<pre><code>${this.renderChildren()}</code></pre>\n`
   }
 }
@@ -161,7 +176,7 @@ export class TableBlock extends Block {
   rows: string[][] = []
 
   private static splitRow(line: string): string[] {
-    let pipeIndexes: number[] = []
+    const pipeIndexes: number[] = []
     let escape = false
     for (let i = 0; i < line.length; i++) {
       if (escape) {
@@ -173,19 +188,19 @@ export class TableBlock extends Block {
       }
     }
 
-    let result: string[] = []
+    const result: string[] = []
     for (let i = 0; i < pipeIndexes.length - 1; i++) {
       result.push(line.slice(pipeIndexes[i] + 1, pipeIndexes[i + 1]).trim())
     }
     return result
   }
 
-  static match(lines: string[]): BlockMatchResult {
+  static match(lines: string[]): BlockMatchResult | null {
     if (lines.length >= 2) {
       let delimiterRow = lines[1]
-      let columnAlign: TableCellAlign[] = []
+      const columnAlign: TableCellAlign[] = []
       let matchResult
-      while (matchResult = delimiterRow.match(this.delimiterCellRegex)) {
+      while ((matchResult = delimiterRow.match(this.delimiterCellRegex))) {
         const colon1 = matchResult[1] === ':'
         const colon2 = matchResult[2] === ':'
         if (colon1 && colon2) {
@@ -201,7 +216,7 @@ export class TableBlock extends Block {
         return null
       }
 
-      let titleRow = this.splitRow(lines[0])
+      const titleRow = this.splitRow(lines[0])
       if (titleRow.length !== columnAlign.length) {
         return null
       }
@@ -210,7 +225,10 @@ export class TableBlock extends Block {
       tableBlock.columnAlign = columnAlign
       tableBlock.rows.push(titleRow)
       tableBlock.lines.push(lines[0], lines[1])
-      return [tableBlock, lines.slice(2)]
+      return {
+        block: tableBlock,
+        remaining: lines.slice(2),
+      }
     } else {
       return null
     }
@@ -235,16 +253,16 @@ export class TableBlock extends Block {
         case TableCellAlign.LEFT:
           return ''
         case TableCellAlign.CENTER:
-          return ` style='text-align:center;' `
+          return ' style=\'text-align:center;\' '
         case TableCellAlign.RIGHT:
-          return ` style='text-align:right;' `
+          return ' style=\'text-align:right;\' '
       }
     }
 
     return `<tr>${this.rows[i].map((cellText, i) => `<${tag}${getAlignStyle(this.columnAlign[i])}>${cellText}</${tag}>`).join('')}</tr>`
   }
 
-  render(parent: Block): string {
+  render(): string {
     const titleStr = `<thead>\n${this.renderRow(0)}</thead>\n`
     let bodyStr = ''
     for (let i = 1; i < this.rows.length; i++) {
@@ -256,23 +274,33 @@ export class TableBlock extends Block {
 }
 
 export class FrontMatterBlock extends Block {
-  static process(lines: string[]): [string[], FrontMatterBlock | null] {
-    let matchResult = FrontMatterBlock.match(lines)
+  static process(lines: string[]): { frontMatter: FrontMatterBlock | null, remaining: string[] } {
+    const matchResult = FrontMatterBlock.match(lines)
     if (matchResult) {
-      let [frontMatter, lines] = matchResult
+      // eslint-disable-next-line prefer-const
+      let {block: frontMatter, remaining} = matchResult
       while (frontMatter.isOpen) {
-        lines = frontMatter.append(lines)
+        remaining = frontMatter.append(remaining)
       }
-      return [lines, frontMatter]
+      return {
+        frontMatter: frontMatter as FrontMatterBlock,
+        remaining,
+      }
     } else {
-      return [lines, null]
+      return {
+        frontMatter: null,
+        remaining: lines,
+      }
     }
   }
 
-  static match(lines: string[]): BlockMatchResult {
+  static match(lines: string[]): BlockMatchResult | null {
     if (lines[0] === '---' && any(lines.slice(1), line => line === '---' || line === '...')) {
       const frontMatter = new FrontMatterBlock()
-      return [frontMatter, lines.slice(1)]
+      return {
+        block: frontMatter,
+        remaining: lines.slice(),
+      }
     } else {
       return null
     }
@@ -292,7 +320,7 @@ export class FrontMatterBlock extends Block {
     }
   }
 
-  render(parent: Block): string {
+  render(): string {
     return ''
   }
 }
@@ -333,7 +361,7 @@ export class HTMLBlock extends Block {
 
   condition: HTMLBlockCondition
 
-  static match(lines: string[]): BlockMatchResult {
+  static match(lines: string[]): BlockMatchResult | null {
     for (const condition of this.conditions) {
       if (condition.start(lines[0])) {
         const htmlBlock = new HTMLBlock()
@@ -342,12 +370,21 @@ export class HTMLBlock extends Block {
         if (condition.end(lines[0])) {
           htmlBlock.close()
           if (lines.length > 1 && lines[1] === '') {
-            return [htmlBlock, lines.slice(2)]
+            return {
+              block: htmlBlock,
+              remaining: lines.slice(2),
+            }
           } else {
-            return [htmlBlock, lines.slice(1)]
+            return {
+              block: htmlBlock,
+              remaining: lines.slice(1),
+            }
           }
         } else {
-          return [htmlBlock, lines.slice(1)]
+          return {
+            block: htmlBlock,
+            remaining: lines.slice(1),
+          }
         }
       }
     }
@@ -370,7 +407,7 @@ export class HTMLBlock extends Block {
     }
   }
 
-  render(parent: Block): string {
+  render(): string {
     return this.lines.join('\n') + '\n'
   }
 }
@@ -380,7 +417,7 @@ export class LinkRefDefBlock extends Block {
   label: string
   def: LinkReference
 
-  static match(lines: string[]): BlockMatchResult {
+  static match(lines: string[]): BlockMatchResult | null {
     const matchResult = lines[0].match(this.regex)
     if (matchResult) {
       const def = {
@@ -393,18 +430,25 @@ export class LinkRefDefBlock extends Block {
       defBlock.close()
 
       if (lines.length > 1 && lines[1] === '') {
-        return [defBlock, lines.slice(2)]
+        return {
+          block: defBlock,
+          remaining: lines.slice(2),
+        }
       } else {
-        return [defBlock, lines.slice(1)]
+        return {
+          block: defBlock,
+          remaining: lines.slice(1),
+        }
       }
     }
-  }
-
-  append(lines: string[]): string[] | null {
     return null
   }
 
-  render(parent: Block): string {
+  append(): string[] | null {
+    return null
+  }
+
+  render(): string {
     return ''
   }
 }
@@ -412,25 +456,31 @@ export class LinkRefDefBlock extends Block {
 export class TOCBlock extends Block {
   private static readonly regex = /^ *\[toc] *$/i
 
-  static match(lines: string[]): BlockMatchResult {
+  static match(lines: string[]): BlockMatchResult | null {
     if (lines[0].match(this.regex)) {
       const toc = new TOCBlock()
       toc.close()
       if (lines.length > 1 && lines[1] === '') {
-        return [toc, lines.slice(2)]
+        return {
+          block: toc,
+          remaining: lines.slice(2),
+        }
       } else {
-        return [toc, lines.slice(1)]
+        return {
+          block: toc,
+          remaining: lines.slice(1),
+        }
       }
     } else {
       return null
     }
   }
 
-  append(lines: string[]): string[] | null {
+  append(): string[] | null {
     return null
   }
 
-  render(parent: Block): string {
-    return `<div>[TOC]</div>\n`
+  render(): string {
+    return '<div>[TOC]</div>\n'
   }
 }

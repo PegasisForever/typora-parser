@@ -1,6 +1,6 @@
 import {last} from '../utils'
 
-export function parseNestedBrackets(line: string, startChar: string, endChar: string): { parsed?: string, remaining?: string } {
+export function parseNestedBrackets(line: string, startChar: string, endChar: string): { parsed: string, remaining: string } | null {
   let parsed = ''
   let isEscape = false
   let i = 0
@@ -11,7 +11,7 @@ export function parseNestedBrackets(line: string, startChar: string, endChar: st
       if (char === startChar) {
         parsed = startChar
       } else {
-        return {}
+        return null
       }
     } else if (isEscape) {
       parsed += char
@@ -40,6 +40,6 @@ export function parseNestedBrackets(line: string, startChar: string, endChar: st
       remaining: line.substring(i + 1),
     }
   } else {
-    return {}
+    return null
   }
 }

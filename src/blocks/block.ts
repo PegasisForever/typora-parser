@@ -1,13 +1,13 @@
-export type BlockMatchResult = [Block, string[]] | null
+export type BlockMatchResult = { block: Block, remaining: string[] }
 
 export abstract class Block {
   lines: string[] = []
   private _isOpen = true
-  get isOpen() {
+  get isOpen(): boolean {
     return this._isOpen
   }
 
-  close() {
+  close(): void {
     this._isOpen = false
   }
 
