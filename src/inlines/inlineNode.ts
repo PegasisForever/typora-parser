@@ -50,6 +50,52 @@ export class CodeSpanNode extends InlineNode {
   }
 }
 
+export class AutolinkNode extends InlineNode {
+  constructor(
+    url: string,
+    public isEmail: boolean,
+  ) {
+    super(url)
+  }
+
+  private static readonly bracketAutolinkRegex = /^<(([a-z0-9+.\-_]{2,32}:)|(www\.))[^ <>]+>/i
+  private static readonly noBracketAutolinkRegex = /^((https:|http:)[^ <>]+)|(www\.[^ <>]+\.[^ <>]+)/i
+  private static readonly bracketAutolinkEmailRegex = /^<[a-z0-9+.\-_]+@[a-z0-9+.\-_]+>/
+  private static readonly noBracketAutolinkEmailRegex = /^[a-z0-9+.\-_]+@[a-z0-9+.\-_]+\.(com|edu|net|org|au|ca|cn|co|de|fm|io|jp|me|ru|tv|us)/i
+
+  private static matchSingle(line: string, regex: RegExp, isEmail: boolean): InlineNodeMatchResult | null {
+    const matchResult = line.match(regex)
+    if (!matchResult) return null
+    let url = matchResult[0]
+    const remaining = line.substring(url.length)
+    if (url[0] === '<') url = url.substring(1, url.length - 1)
+
+    return {
+      node: new AutolinkNode(url, isEmail),
+      remaining,
+    }
+  }
+
+  static match(line: string): InlineNodeMatchResult | null {
+    return this.matchSingle(line, this.bracketAutolinkEmailRegex, true) ??
+      this.matchSingle(line, this.noBracketAutolinkEmailRegex, true) ??
+      this.matchSingle(line, this.bracketAutolinkRegex, false) ??
+      this.matchSingle(line, this.noBracketAutolinkRegex, false)
+  }
+
+  rawText(): string {
+    return this.text
+  }
+
+  render(): string {
+    if (this.isEmail) {
+      return `<a href='mailto:${this.text}' target='_blank' class='url'>${this.text}</a>`
+    } else {
+      return `<a href='${this.text}' target='_blank' class='url'>${this.text}</a>`
+    }
+  }
+
+}
 
 export abstract class ContainerInlineNode extends InlineNode {
   children: InlineNode[] = []
@@ -58,6 +104,7 @@ export abstract class ContainerInlineNode extends InlineNode {
     const inlineNodeTypes = [
       CodeSpanNode,
       LinkNode,
+      AutolinkNode,
       EmphNode.EmphNode,
     ]
 
