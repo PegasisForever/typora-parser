@@ -12,12 +12,17 @@ export function any<T>(list: T[], condition: (it: T) => boolean): boolean {
   return false
 }
 
-export function findIndexOfLast<T>(list: T[], condition: (it: T) => boolean): number | null {
-  for (let i = list.length - 1; i >= 0; i--) {
-    if (condition(list[i])) {
-      return i
-    }
-  }
+// replace escape characters with reserved unicode so it get treated like normal text characters while parsing
+const mdEscapableChars = '!"#$%&\'()*+,-./:;<=>?@[\\]^_{|}~'
+const mdEscapableCharReplaces = String.fromCodePoint(...Array.from(mdEscapableChars).map((_, i) => 0xE000 + i))
+function getUnicodePoint(char: string): string {
+  const hex = char.codePointAt(0).toString(16)
+  return '\\u' + '0000'.substring(0, 4 - hex.length) + hex
+}
+const mdPunctuationRegex=`[!"#$%&'()+,-./:;<=>?@[\\\\\\]^_\`{|}~${getUnicodePoint(mdEscapableCharReplaces[0])}-${getUnicodePoint(last(mdEscapableCharReplaces))}]`
 
-  return null
+export const EscapeUtils = {
+  mdEscapableChars,
+  mdEscapableCharReplaces,
+  mdPunctuationRegex,
 }

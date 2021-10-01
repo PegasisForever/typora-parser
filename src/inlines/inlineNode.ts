@@ -1,5 +1,5 @@
 import {parseNestedBrackets, ParseNestedBracketsResult} from './parseNestedBrackets'
-import {last} from '../utils'
+import {EscapeUtils, last} from '../utils'
 
 export type InlineNodeMatchResult = { node: InlineNode | InlineNode[], remaining: string }
 
@@ -253,7 +253,7 @@ namespace EmphNode {
   type DelimiterChar = '*' | '_'
   type FindDelimiterResult = { before: string, delimiterRun: string, after: string }
 
-  const punctuationRegex = /[!"#$%&'()+,-./:;<=>?@[\\\]^_`{|}~]/
+  const punctuationRegex = new RegExp(EscapeUtils.mdPunctuationRegex)
   const whiteSpaceRegex = /\s|^$/
 
   function analyzeBeforeAfterChar(beforeChar: string, afterChar: string): { bWhiteSpace: boolean, bPunctuation: boolean, aWhiteSpace: boolean, aPunctuation: boolean } {
