@@ -2,6 +2,8 @@ import {Block, BlockMatchResult} from './block'
 import {ListItemBlock} from './containerBlocks'
 import {any} from '../utils'
 import {LinkReference} from '../parser'
+import {parseInline} from '../inlines/parseInline'
+import {RootNode} from '../inlines/inlineNode'
 
 export class ParagraphBlock extends Block {
   static match(lines: string[]): BlockMatchResult | null {
@@ -31,6 +33,11 @@ export class ParagraphBlock extends Block {
       this.lines.push(lines[0])
       return lines.slice(1)
     }
+  }
+
+  close(): void {
+    super.close()
+    this.inlineNode = parseInline(this.lines.join('\n'))
   }
 
   render(parent: Block): string {
@@ -98,11 +105,13 @@ export class HeadingBlock extends Block {
     return null
   }
 
-  protected renderChildren(): string {
-    return this.content
+  close(): void {
+    super.close()
+    this.inlineNode = parseInline(this.content)
   }
 
   render(): string {
+    // todo use raw text
     return `<h${this.level} id='${this.content.replaceAll(' ', '-').toLowerCase()}'>${this.renderChildren()}</h${this.level}>\n`
   }
 }
@@ -174,6 +183,7 @@ export class TableBlock extends Block {
   private static readonly delimiterCellRegex = /^\| *(:?)-+(:?) */
   columnAlign: TableCellAlign[] = []
   rows: string[][] = []
+  rowsNodes: RootNode[][] = []
 
   private static splitRow(line: string): string[] {
     const pipeIndexes: number[] = []
@@ -245,6 +255,13 @@ export class TableBlock extends Block {
     }
   }
 
+  close(): void {
+    super.close()
+    for (const row of this.rows) {
+      this.rowsNodes.push(row.map((cell) => parseInline(cell)))
+    }
+  }
+
   private renderRow(i: number): string {
     const tag = i === 0 ? 'th' : 'td'
 
@@ -259,7 +276,7 @@ export class TableBlock extends Block {
       }
     }
 
-    return `<tr>${this.rows[i].map((cellText, i) => `<${tag}${getAlignStyle(this.columnAlign[i])}>${cellText}</${tag}>`).join('')}</tr>`
+    return `<tr>${this.rowsNodes[i].map((node, i) => `<${tag}${getAlignStyle(this.columnAlign[i])}>${node.render(null)}</${tag}>`).join('')}</tr>`
   }
 
   render(): string {
@@ -325,54 +342,61 @@ export class FrontMatterBlock extends Block {
   }
 }
 
-abstract class HTMLBlockCondition {
-  startRegex: RegExp
-  endRegex: RegExp
+export namespace HTMLBlock{
+  abstract class HTMLBlockCondition {
+    startRegex: RegExp
+    endRegex: RegExp
 
-  start(line: string): boolean {
-    return !!line.match(this.startRegex)
+    start(line: string): boolean {
+      return !!line.match(this.startRegex)
+    }
+
+    end(line: string): boolean {
+      return !!line.match(this.endRegex)
+    }
   }
 
-  end(line: string): boolean {
-    return !!line.match(this.endRegex)
-  }
-}
+  export class HTMLBlock extends Block {
+    // according to the conditions on https://spec.commonmark.org/0.30/#html-blocks.
+    // Some conditions are missing because typora doesn't support them.
+    private static readonly conditions: HTMLBlockCondition[] = [
+      // condition 1
+      new class extends HTMLBlockCondition {
+        startRegex = /^<(pre|script|style|textarea)( |\t|>|$)/i
+        endRegex = /<\/pre>|<\/script>|<\/style>|<\/textarea>/i
+      },
+      // condition 2
+      new class extends HTMLBlockCondition {
+        startRegex = /^<!--/
+        endRegex = /-->/
+      },
+      // condition 6
+      new class extends HTMLBlockCondition {
+        startRegex = /^<\/?(address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h1|h2|h3|h4|h5|h6|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|section|source|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)( |\t|$|\/?>)/i
+        endRegex = /^$/
+      },
+    ]
 
-export class HTMLBlock extends Block {
-  // according to the conditions on https://spec.commonmark.org/0.30/#html-blocks.
-  // Some conditions are missing because typora doesn't support them.
-  private static readonly conditions: HTMLBlockCondition[] = [
-    // condition 1
-    new class extends HTMLBlockCondition {
-      startRegex = /^<(pre|script|style|textarea)( |\t|>|$)/i
-      endRegex = /<\/pre>|<\/script>|<\/style>|<\/textarea>/i
-    },
-    // condition 2
-    new class extends HTMLBlockCondition {
-      startRegex = /^<!--/
-      endRegex = /-->/
-    },
-    // condition 6
-    new class extends HTMLBlockCondition {
-      startRegex = /^<\/?(address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h1|h2|h3|h4|h5|h6|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|section|source|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)( |\t|$|\/?>)/i
-      endRegex = /^$/
-    },
-  ]
+    condition: HTMLBlockCondition
 
-  condition: HTMLBlockCondition
-
-  static match(lines: string[]): BlockMatchResult | null {
-    for (const condition of this.conditions) {
-      if (condition.start(lines[0])) {
-        const htmlBlock = new HTMLBlock()
-        htmlBlock.condition = condition
-        htmlBlock.lines.push(lines[0])
-        if (condition.end(lines[0])) {
-          htmlBlock.close()
-          if (lines.length > 1 && lines[1] === '') {
-            return {
-              block: htmlBlock,
-              remaining: lines.slice(2),
+    static match(lines: string[]): BlockMatchResult | null {
+      for (const condition of this.conditions) {
+        if (condition.start(lines[0])) {
+          const htmlBlock = new HTMLBlock()
+          htmlBlock.condition = condition
+          htmlBlock.lines.push(lines[0])
+          if (condition.end(lines[0])) {
+            htmlBlock.close()
+            if (lines.length > 1 && lines[1] === '') {
+              return {
+                block: htmlBlock,
+                remaining: lines.slice(2),
+              }
+            } else {
+              return {
+                block: htmlBlock,
+                remaining: lines.slice(1),
+              }
             }
           } else {
             return {
@@ -380,35 +404,30 @@ export class HTMLBlock extends Block {
               remaining: lines.slice(1),
             }
           }
-        } else {
-          return {
-            block: htmlBlock,
-            remaining: lines.slice(1),
-          }
         }
       }
+
+      return null
     }
 
-    return null
-  }
-
-  append(lines: string[]): string[] | null {
-    if (this.condition.end(lines[0])) {
-      if (lines[0] !== '') this.lines.push(lines[0])
-      this.close()
-      if (lines.length > 1 && lines[1] === '') {
-        return lines.slice(2)
+    append(lines: string[]): string[] | null {
+      if (this.condition.end(lines[0])) {
+        if (lines[0] !== '') this.lines.push(lines[0])
+        this.close()
+        if (lines.length > 1 && lines[1] === '') {
+          return lines.slice(2)
+        } else {
+          return lines.slice(1)
+        }
       } else {
+        this.lines.push(lines[0])
         return lines.slice(1)
       }
-    } else {
-      this.lines.push(lines[0])
-      return lines.slice(1)
     }
-  }
 
-  render(): string {
-    return this.lines.join('\n') + '\n'
+    render(): string {
+      return this.lines.join('\n') + '\n'
+    }
   }
 }
 

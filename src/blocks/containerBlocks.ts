@@ -21,7 +21,7 @@ export abstract class ContainerBlock extends Block {
       TableBlock,
       LinkRefDefBlock,
       TOCBlock,
-      HTMLBlock,
+      HTMLBlock.HTMLBlock,
       FencedCodeBlock,
       HeadingBlock,
       DividerBlock,
@@ -39,15 +39,15 @@ export abstract class ContainerBlock extends Block {
             const matchResult = blockType.match(lines)
             if (matchResult) {
               last(children).close()
-              children.push(matchResult[0])
-              lines = matchResult[1]
+              children.push(matchResult.block)
+              lines = matchResult.remaining
               continue out
             }
           }
 
           // if no other block type matches this new line, append this line to the paragraph
           lines = last(children).append(lines)
-          console.assert(lines !== null)
+          console.assert(lines !== null && lines !== undefined)
         } else {
 
           // try to append new line to the last open children
@@ -61,8 +61,8 @@ export abstract class ContainerBlock extends Block {
           for (const blockType of blockTypes) {
             const matchResult = blockType.match(lines)
             if (matchResult) {
-              children.push(matchResult[0])
-              lines = matchResult[1]
+              children.push(matchResult.block)
+              lines = matchResult.remaining
               continue out
             }
           }
@@ -281,10 +281,10 @@ export class ListBlock extends ContainerBlock {
     const matchResult = ListItemBlock.match(lines)
     if (matchResult) {
       const listBlock = new ListBlock()
-      listBlock.children.push(matchResult[0] as ListItemBlock)
+      listBlock.children.push(matchResult.block as ListItemBlock)
       return {
         block: listBlock,
-        remaining: matchResult[1],
+        remaining: matchResult.remaining,
       }
     } else {
       return null
@@ -302,10 +302,11 @@ export class ListBlock extends ContainerBlock {
     console.assert(!last(this.children).isOpen)
     const matchResult = ListItemBlock.match(lines)
     if (matchResult) {
-      const newChild = matchResult[0] as ListItemBlock
+      const {block, remaining} = matchResult
+      const newChild = block as ListItemBlock
       if (newChild.listMarkerType === this.listMarkerType) {
-        this.children.push(matchResult[0] as ListItemBlock)
-        return matchResult[1]
+        this.children.push(block as ListItemBlock)
+        return remaining
       }
     }
 

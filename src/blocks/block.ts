@@ -1,8 +1,12 @@
+import {RootNode} from '../inlines/inlineNode'
+
 export type BlockMatchResult = { block: Block, remaining: string[] }
 
 export abstract class Block {
   lines: string[] = []
+  inlineNode: RootNode | null = null
   private _isOpen = true
+
   get isOpen(): boolean {
     return this._isOpen
   }
@@ -15,7 +19,11 @@ export abstract class Block {
   abstract append(lines: string[]): string[] | null
 
   protected renderChildren(): string {
-    return this.lines.join('')
+    if (this.inlineNode) {
+      return this.inlineNode.render(null)
+    } else {
+      return this.lines.join('')
+    }
   }
 
   abstract render(parent: Block): string
