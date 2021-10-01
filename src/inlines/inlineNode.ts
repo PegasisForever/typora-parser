@@ -3,10 +3,28 @@ import {last} from '../utils'
 
 export type InlineNodeMatchResult = { node: InlineNode | InlineNode[], remaining: string }
 
+type InlineNodeConstructor =
+  typeof InlineNode
+  | typeof TextNode
+  | typeof CodeSpanNode
+  | typeof AutolinkNode
+  | typeof RawHTMLNode
+  | typeof ContainerInlineNode
+  | typeof RootNode
+  | typeof EmphNode.EmphNode
+  | typeof LinkNode.LinkNode
+
 export abstract class InlineNode {
   constructor(
     public text: string,
   ) {
+  }
+
+  static higherPriorityNodeTypes: InlineNodeConstructor[] = []
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  static match(line: string): InlineNodeMatchResult | null {
+    throw new Error('Not Implemented')
   }
 
   abstract rawText(parent: InlineNode): string
@@ -30,10 +48,11 @@ export class CodeSpanNode extends InlineNode {
   static match(line: string): InlineNodeMatchResult | null {
     const backtickStr = line.match(this.backtickRegex)?.[0]
     if (!backtickStr) return null
-    const {parsed, remaining} = parseNestedBrackets(line, backtickStr, backtickStr)
-    if (parsed) {
+    const parsedResult = parseNestedBrackets(line, backtickStr, backtickStr)
+    if (parsedResult) {
+      const {inside, remaining} = parsedResult
       return {
-        node: new CodeSpanNode(parsed),
+        node: new CodeSpanNode(inside),
         remaining,
       }
     } else {
@@ -142,10 +161,10 @@ export abstract class ContainerInlineNode extends InlineNode {
 
   protected constructChildren(text: string): InlineNode[] {
     const inlineNodeTypes = [
-      CodeSpanNode,
-      LinkNode,
-      AutolinkNode,
       RawHTMLNode,
+      AutolinkNode,
+      CodeSpanNode,
+      LinkNode.LinkNode,
       EmphNode.EmphNode,
     ]
 
@@ -156,6 +175,26 @@ export abstract class ContainerInlineNode extends InlineNode {
         const matchResult = inlineNodeType.match(text)
         if (!matchResult) continue
         const {node, remaining} = matchResult
+
+        // todo optimize this
+        function breakByHigherPriorityBlockInside(): boolean {
+          if (inlineNodeType.higherPriorityNodeTypes.length == 0) return false
+
+          for (let i = 1; i < text.length - remaining.length; i++) {
+            for (const higherPriorityNodeType of inlineNodeType.higherPriorityNodeTypes) {
+              const insideMatchResult = higherPriorityNodeType.match(text.substring(i))
+              if (!insideMatchResult) continue
+
+              if (insideMatchResult.remaining.length < remaining.length) {
+                return true
+              }
+            }
+          }
+
+          return false
+        }
+
+        if (breakByHigherPriorityBlockInside()) continue
 
         if (buffer !== '') {
           inlineNodes.push(new TextNode(buffer))
@@ -392,102 +431,128 @@ namespace EmphNode {
   }
 }
 
-// todo link may not contain other links
-// priority lower than code spans, auto links, raw html tags
-//          higher than emphasis and strong emphasis
-class LinkTextNode extends ContainerInlineNode {
-  constructor(
-    text: string,
-    public isImage: boolean,
-  ) {
-    super(text)
-    this.children = this.constructChildren(text)
-  }
-
-  static match(line: string): InlineNodeMatchResult | null {
-    let isImage: boolean
-    let parseResult: ParseNestedBracketsResult | null
-    if (line[0] === '!') {
-      isImage = true
-      parseResult = parseNestedBrackets(line.substring(1), '[', ']')
-    } else {
-      isImage = false
-      parseResult = parseNestedBrackets(line, '[', ']')
+namespace LinkNode {
+  // todo link may not contain other links
+  class LinkTextNode extends ContainerInlineNode {
+    constructor(
+      text: string,
+      public isImage: boolean,
+    ) {
+      super(text)
+      this.children = this.constructChildren(text)
     }
-    if (!parseResult) return null
-    const {parsed, remaining} = parseResult
-    return {
-      node: new LinkTextNode(parsed, isImage),
-      remaining,
-    }
-  }
-}
 
-class LinkDestinationNode extends ContainerInlineNode {
-  constructor(
-    public destination: string,
-    public title?: string,
-  ) {
-    super(title ?? destination)
-  }
-
-  private static readonly destinationTitleRegex = /^(.*?)(( '(.*[^\\])')|( "(.*[^\\])"))?$/
-
-  static match(line: string): InlineNodeMatchResult | null {
-    const {parsed, remaining} = parseNestedBrackets(line, '(', ')')
-    if (parsed) {
-      const matchResult = parsed.match(this.destinationTitleRegex)
+    static match(line: string): InlineNodeMatchResult | null {
+      let isImage: boolean
+      let parseResult: ParseNestedBracketsResult | null
+      if (line[0] === '!') {
+        isImage = true
+        parseResult = parseNestedBrackets(line.substring(1), '[', ']')
+      } else {
+        isImage = false
+        parseResult = parseNestedBrackets(line, '[', ']')
+      }
+      if (!parseResult) return null
+      const {inside, remaining} = parseResult
       return {
-        node: new LinkDestinationNode(matchResult[1], matchResult[4] ?? matchResult[6]),
+        node: new LinkTextNode(inside, isImage),
         remaining,
       }
-    } else {
-      return null
+    }
+  }
+
+  class LinkDestinationNode extends ContainerInlineNode {
+    constructor(
+      public destination: string,
+      public title?: string,
+    ) {
+      super(title ?? destination)
+    }
+
+    private static readonly destinationTitleRegex = /^(.*?)(( '(.*[^\\])')|( "(.*[^\\])"))?$/
+
+    static match(line: string): InlineNodeMatchResult | null {
+      const parsedResult = parseNestedBrackets(line, '(', ')')
+      if (parsedResult) {
+        const {inside, remaining} = parseNestedBrackets(line, '(', ')')
+        const matchResult = inside.match(this.destinationTitleRegex)
+        return {
+          node: new LinkDestinationNode(matchResult[1], matchResult[4] ?? matchResult[6]),
+          remaining,
+        }
+      } else {
+        return null
+      }
+    }
+  }
+
+  export class LinkNode extends ContainerInlineNode {
+    constructor(
+      linkTextNode: LinkTextNode,
+      linkDestinationNode: LinkDestinationNode,
+      text: string,
+    ) {
+      super(text)
+      this.children = [linkTextNode, linkDestinationNode]
+    }
+
+    get linkTextNode(): LinkTextNode {
+      return this.children[0] as LinkTextNode
+    }
+
+    get linkDestinationNode(): LinkDestinationNode {
+      return this.children[1] as LinkDestinationNode
+    }
+
+    static match(line: string): InlineNodeMatchResult | null {
+      const linkTextMatchResult = LinkTextNode.match(line)
+      if (!linkTextMatchResult) return null
+      const linkDestinationMatchResult = LinkDestinationNode.match(linkTextMatchResult.remaining)
+      if (!linkDestinationMatchResult) return null
+      const remaining = linkDestinationMatchResult.remaining
+      const nodeText = line.substring(0, line.length - remaining.length)
+
+      return {
+        node: new LinkNode(
+          linkTextMatchResult.node as LinkTextNode,
+          linkDestinationMatchResult.node as LinkDestinationNode,
+          nodeText,
+        ),
+        remaining,
+      }
+    }
+
+    render(): string {
+      if (this.linkTextNode.isImage) {
+        const srcText = ` src="${this.linkDestinationNode.destination}"`
+        const altText = this.linkTextNode.text ? ` alt="${this.linkTextNode.text}"` : ''
+        const titleText = this.linkDestinationNode.title ? ` title="${this.linkDestinationNode.title}"` : ''
+
+        return `<img${srcText} referrerpolicy="no-referrer"${altText}${titleText}>`
+      } else {
+        const hrefText = ` href='${this.linkDestinationNode.destination}'`
+        const titleText = this.linkDestinationNode.title ? ` title='${this.linkDestinationNode.title}'` : ''
+
+        return `<a${hrefText}${titleText}>${this.linkTextNode.render(this)}</a>`
+      }
     }
   }
 }
 
-export class LinkNode extends ContainerInlineNode {
-  constructor(
-    linkTextNode: LinkTextNode,
-    linkDestinationNode: LinkDestinationNode,
-  ) {
-    super('')
-    this.children = [linkTextNode, linkDestinationNode]
-  }
+// inline block precedence
+// 1. raw html, autolink, code span
+// 2. link
+// 3. emphasis
 
-  get linkTextNode(): LinkTextNode {
-    return this.children[0] as LinkTextNode
-  }
+EmphNode.EmphNode.higherPriorityNodeTypes = [
+  RawHTMLNode,
+  AutolinkNode,
+  CodeSpanNode,
+  LinkNode.LinkNode,
+]
 
-  get linkDestinationNode(): LinkDestinationNode {
-    return this.children[1] as LinkDestinationNode
-  }
-
-  static match(line: string): InlineNodeMatchResult | null {
-    const linkTextMatchResult = LinkTextNode.match(line)
-    if (!linkTextMatchResult) return null
-    const linkDestinationMatchResult = LinkDestinationNode.match(linkTextMatchResult.remaining)
-    if (!linkDestinationMatchResult) return null
-
-    return {
-      node: new LinkNode(linkTextMatchResult.node as LinkTextNode, linkDestinationMatchResult.node as LinkDestinationNode),
-      remaining: linkDestinationMatchResult.remaining,
-    }
-  }
-
-  render(): string {
-    if (this.linkTextNode.isImage) {
-      const srcText = ` src="${this.linkDestinationNode.destination}"`
-      const altText = this.linkTextNode.text ? ` alt="${this.linkTextNode.text}"` : ''
-      const titleText = this.linkDestinationNode.title ? ` title="${this.linkDestinationNode.title}"` : ''
-
-      return `<img${srcText} referrerpolicy="no-referrer"${altText}${titleText}>`
-    } else {
-      const hrefText = ` href='${this.linkDestinationNode.destination}'`
-      const titleText = this.linkDestinationNode.title ? ` title='${this.linkDestinationNode.title}'` : ''
-
-      return `<a${hrefText}${titleText}>${this.linkTextNode.render(this)}</a>`
-    }
-  }
-}
+LinkNode.LinkNode.higherPriorityNodeTypes = [
+  RawHTMLNode,
+  AutolinkNode,
+  CodeSpanNode,
+]

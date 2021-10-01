@@ -1,6 +1,6 @@
 import {last} from '../utils'
 
-export type ParseNestedBracketsResult = { parsed: string, remaining: string }
+export type ParseNestedBracketsResult = { inside: string, remaining: string }
 
 export function parseNestedBrackets(line: string, startChar: string, endChar: string): ParseNestedBracketsResult | null {
   let parsed = ''
@@ -38,7 +38,7 @@ export function parseNestedBrackets(line: string, startChar: string, endChar: st
 
   if (parsed.length >= 2 && last(parsed) === endChar) {
     return {
-      parsed: parsed.substring(1, parsed.length - 1),
+      inside: parsed.substring(1, parsed.length - 1),
       remaining: line.substring(i + 1),
     }
   } else {

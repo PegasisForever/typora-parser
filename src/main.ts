@@ -4,7 +4,6 @@ import parse from './parser'
 import {inlineParser} from './inlines/inlineParser'
 
 (async () => {
-
   const md = await fs.readFile('test.md', {encoding: 'utf8'})
 
   const rootNode = inlineParser(md.replaceAll('\n', ''))
