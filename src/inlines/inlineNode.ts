@@ -38,7 +38,7 @@ export class TextNode extends InlineNode {
   }
 
   render(): string {
-    return this.text
+    return EscapeUtils.escapeHtml(this.text)
   }
 }
 
@@ -65,7 +65,7 @@ export class CodeSpanNode extends InlineNode {
   }
 
   render(): string {
-    return `<code>${this.text}</code>`
+    return `<code>${EscapeUtils.escapeHtml(this.text)}</code>`
   }
 }
 
@@ -107,10 +107,11 @@ export class AutolinkNode extends InlineNode {
   }
 
   render(): string {
+    const escapedText=EscapeUtils.escapeHtml(this.text)
     if (this.isEmail) {
-      return `<a href='mailto:${this.text}' target='_blank' class='url'>${this.text}</a>`
+      return `<a href='mailto:${escapedText}' target='_blank' class='url'>${escapedText}</a>`
     } else {
-      return `<a href='${this.text}' target='_blank' class='url'>${this.text}</a>`
+      return `<a href='${escapedText}' target='_blank' class='url'>${escapedText}</a>`
     }
   }
 }
@@ -152,7 +153,7 @@ export class RawHTMLNode extends InlineNode {
   }
 
   render(): string {
-    return this.text
+    return EscapeUtils.escapeHtml(this.text)
   }
 }
 
@@ -528,14 +529,14 @@ namespace LinkNode {
 
     render(): string {
       if (this.linkTextNode.isImage) {
-        const srcText = ` src="${this.linkDestinationNode.destination}"`
-        const altText = this.linkTextNode.text ? ` alt="${this.linkTextNode.text}"` : ''
-        const titleText = this.linkDestinationNode.title ? ` title="${this.linkDestinationNode.title}"` : ''
+        const srcText = ` src="${EscapeUtils.escapeHtml(this.linkDestinationNode.destination)}"`
+        const altText = this.linkTextNode.text ? ` alt="${EscapeUtils.escapeHtml(this.linkTextNode.text)}"` : ''
+        const titleText = this.linkDestinationNode.title ? ` title="${EscapeUtils.escapeHtml(this.linkDestinationNode.title)}"` : ''
 
         return `<img${srcText} referrerpolicy="no-referrer"${altText}${titleText}>`
       } else {
-        const hrefText = ` href='${this.linkDestinationNode.destination}'`
-        const titleText = this.linkDestinationNode.title ? ` title='${this.linkDestinationNode.title}'` : ''
+        const hrefText = ` href='${EscapeUtils.escapeHtml(this.linkDestinationNode.destination)}'`
+        const titleText = this.linkDestinationNode.title ? ` title='${EscapeUtils.escapeHtml(this.linkDestinationNode.title)}'` : ''
 
         return `<a${hrefText}${titleText}>${this.linkTextNode.render(this)}</a>`
       }

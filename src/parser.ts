@@ -12,9 +12,8 @@ export class MarkdownParseResult {
   renderHTML(): string {
     let html = this.ast.render()
     for (let i = 0; i < EscapeUtils.mdEscapableChars.length; i++) {
-      html = html.replaceAll(EscapeUtils.mdEscapableCharReplaces[i], EscapeUtils.mdEscapableChars[i])
+      html = html.replaceAll(EscapeUtils.mdEscapableCharReplaces[i], EscapeUtils.escapeHtml(EscapeUtils.mdEscapableChars[i]))
     }
-    // todo html escape
     return html
   }
 }

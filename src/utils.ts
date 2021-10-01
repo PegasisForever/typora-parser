@@ -13,16 +13,29 @@ export function any<T>(list: T[], condition: (it: T) => boolean): boolean {
 }
 
 // replace escape characters with reserved unicode so it get treated like normal text characters while parsing
-const mdEscapableChars = '!"#$%&\'()*+,-./:;<=>?@[\\]^_{|}~'
+const mdEscapableChars = '!"#$&\'()*+-.<=>[\\]^_`{|}~'
 const mdEscapableCharReplaces = String.fromCodePoint(...Array.from(mdEscapableChars).map((_, i) => 0xE000 + i))
+
 function getUnicodePoint(char: string): string {
   const hex = char.codePointAt(0).toString(16)
   return '\\u' + '0000'.substring(0, 4 - hex.length) + hex
 }
-const mdPunctuationRegex=`[!"#$%&'()+,-./:;<=>?@[\\\\\\]^_\`{|}~${getUnicodePoint(mdEscapableCharReplaces[0])}-${getUnicodePoint(last(mdEscapableCharReplaces))}]`
+
+const mdPunctuationRegex = `[!"#$%&'()+,-./:;<=>?@[\\\\\\]^_\`{|}~${getUnicodePoint(mdEscapableCharReplaces[0])}-${getUnicodePoint(last(mdEscapableCharReplaces))}]`
+
+const htmlEscapableChars = '&\'"<>'
+const htmlEscapableCharReplaces = ['&amp;', '&#39;', '&quot;', '&lt;', '&gt;']
 
 export const EscapeUtils = {
   mdEscapableChars,
   mdEscapableCharReplaces,
   mdPunctuationRegex,
+  htmlEscapableChars,
+  htmlEscapableCharReplaces,
+  escapeHtml: (str: string): string => {
+    for (let i = 0; i < htmlEscapableChars.length; i++) {
+      str = str.replaceAll(htmlEscapableChars[i], htmlEscapableCharReplaces[i])
+    }
+    return str
+  },
 }
