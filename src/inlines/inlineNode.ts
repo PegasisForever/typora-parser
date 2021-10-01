@@ -148,7 +148,7 @@ export class RawHTMLNode extends InlineNode {
   }
 
   rawText(): string {
-    return this.text
+    return ''
   }
 
   render(): string {
@@ -520,6 +520,10 @@ namespace LinkNode {
         ),
         remaining,
       }
+    }
+
+    rawText(): string {
+      return this.linkTextNode.rawText()
     }
 
     render(): string {

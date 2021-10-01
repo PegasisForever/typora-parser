@@ -81,6 +81,7 @@ export class DividerBlock extends Block {
 
 export class HeadingBlock extends Block {
   private static readonly regex = /^ {0,3}(#{1,6})[ \t]+(.*?)([ \t]+#+)?[ \t]*$/
+  private static readonly htmlEscapeChars = [' ', '<', '>', '&', '\'', '"', '\u00A0']
   content = ''
   level: 1 | 2 | 3 | 4 | 5 | 6
 
@@ -110,9 +111,17 @@ export class HeadingBlock extends Block {
     this.inlineNode = parseInline(this.content)
   }
 
+  getID(): string {
+    let id = this.inlineNode.rawText().toLowerCase()
+    id = id.trim()
+    for (const char of HeadingBlock.htmlEscapeChars) {
+      id = id.replaceAll(char, '-')
+    }
+    return id
+  }
+
   render(): string {
-    // todo use raw text
-    return `<h${this.level} id='${this.content.replaceAll(' ', '-').toLowerCase()}'>${this.renderChildren()}</h${this.level}>\n`
+    return `<h${this.level} id='${this.getID()}'>${this.renderChildren()}</h${this.level}>\n`
   }
 }
 
@@ -342,7 +351,7 @@ export class FrontMatterBlock extends Block {
   }
 }
 
-export namespace HTMLBlock{
+export namespace HTMLBlock {
   abstract class HTMLBlockCondition {
     startRegex: RegExp
     endRegex: RegExp
