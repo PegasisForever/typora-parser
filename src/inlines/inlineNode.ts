@@ -1,4 +1,4 @@
-import {parseNestedBrackets, ParseNestedBracketsResult} from './parseNestedBrackets'
+import {isLeftDelimiter, isRightDelimiter, delimiterUtils, ParseNestedBracketsResult} from './delimiterUtils'
 import {EscapeUtils, last} from '../utils'
 
 export type InlineNodeMatchResult = { node: InlineNode | InlineNode[], remaining: string }
@@ -33,6 +33,8 @@ export abstract class InlineNode {
 }
 
 export class TextNode extends InlineNode {
+  static higherPriorityNodeTypes = []
+
   rawText(): string {
     return this.text
   }
@@ -44,11 +46,12 @@ export class TextNode extends InlineNode {
 
 export class CodeSpanNode extends InlineNode {
   private static readonly backtickRegex = /^`+/
+  static higherPriorityNodeTypes = []
 
   static match(line: string): InlineNodeMatchResult | null {
     const backtickStr = line.match(this.backtickRegex)?.[0]
     if (!backtickStr) return null
-    const parsedResult = parseNestedBrackets(line, backtickStr, backtickStr)
+    const parsedResult = delimiterUtils(line, backtickStr, backtickStr)
     if (parsedResult) {
       const {inside, remaining} = parsedResult
       return {
@@ -81,6 +84,7 @@ export class AutolinkNode extends InlineNode {
   private static readonly noBracketAutolinkRegex = /^((https:|http:)[^ <>]+)|(www\.[^ <>]+\.[^ <>]+)/i
   private static readonly bracketAutolinkEmailRegex = /^<[a-z0-9+.\-_]+@[a-z0-9+.\-_]+>/
   private static readonly noBracketAutolinkEmailRegex = /^[a-z0-9+.\-_]+@[a-z0-9+.\-_]+\.(com|edu|net|org|au|ca|cn|co|de|fm|io|jp|me|ru|tv|us)/i
+  static higherPriorityNodeTypes = []
 
   private static matchSingle(line: string, regex: RegExp, isEmail: boolean): InlineNodeMatchResult | null {
     const matchResult = line.match(regex)
@@ -107,7 +111,7 @@ export class AutolinkNode extends InlineNode {
   }
 
   render(): string {
-    const escapedText=EscapeUtils.escapeHtml(this.text)
+    const escapedText = EscapeUtils.escapeHtml(this.text)
     if (this.isEmail) {
       return `<a href='mailto:${escapedText}' target='_blank' class='url'>${escapedText}</a>`
     } else {
@@ -134,6 +138,7 @@ export class RawHTMLNode extends InlineNode {
     RawHTMLNode.processingInstructionRegex,
     RawHTMLNode.cdataSectionRegex,
   ]
+  static higherPriorityNodeTypes = []
 
   static match(line: string): InlineNodeMatchResult | null {
     for (const regex of RawHTMLNode.htmlTagRegexes) {
@@ -158,6 +163,7 @@ export class RawHTMLNode extends InlineNode {
 }
 
 export abstract class ContainerInlineNode extends InlineNode {
+  static higherPriorityNodeTypes = []
   children: InlineNode[] = []
 
   protected constructChildren(text: string): InlineNode[] {
@@ -165,6 +171,9 @@ export abstract class ContainerInlineNode extends InlineNode {
       RawHTMLNode,
       AutolinkNode,
       CodeSpanNode,
+      HighlightNode,
+      SubScriptNode,
+      SuperScriptNode,
       LinkNode.LinkNode,
       EmphNode.EmphNode,
     ]
@@ -179,7 +188,7 @@ export abstract class ContainerInlineNode extends InlineNode {
 
         // todo optimize this
         function breakByHigherPriorityBlockInside(): boolean {
-          if (inlineNodeType.higherPriorityNodeTypes.length == 0) return false
+          if (inlineNodeType.higherPriorityNodeTypes.length === 0) return false
 
           for (let i = 1; i < text.length - remaining.length; i++) {
             for (const higherPriorityNodeType of inlineNodeType.higherPriorityNodeTypes) {
@@ -239,6 +248,111 @@ export class RootNode extends ContainerInlineNode {
   }
 }
 
+export abstract class DecoratorNode extends ContainerInlineNode {
+  protected constructor(text: string) {
+    super(text)
+    this.children = this.constructChildren(text)
+  }
+
+  static delimiterRun = '?' // override me
+
+  protected static findFirstDelimiter(str: string, flanking: 'left' | 'right', findBeforeI = Infinity): { before: string, delimiterRun: string, after: string } | null {
+    let i = 0
+    while (i <= str.length) {
+      i = str.substring(0, findBeforeI).indexOf(this.delimiterRun, i) // todo check
+      if (i === -1) return null
+      const before = str.substring(0, i)
+
+      i += this.delimiterRun.length
+
+      const result = {
+        before,
+        delimiterRun: this.delimiterRun,
+        after: str.substring(i),
+      }
+
+      const flankingTestFunction = flanking === 'left' ? isLeftDelimiter : isRightDelimiter
+      if (flankingTestFunction(last(before) ?? '', result.delimiterRun, result.after[0] ?? '')) {
+        return result
+      }
+    }
+    return null
+  }
+
+  static match(line: string): InlineNodeMatchResult | null {
+    const leftDelimiterResult = this.findFirstDelimiter(line, 'left', 2)
+    if (!leftDelimiterResult || leftDelimiterResult.before !== '') return null
+    const {delimiterRun, after: afterLeft} = leftDelimiterResult
+
+    const rightDelimiterResult = this.findFirstDelimiter(afterLeft, 'right')
+
+    if (rightDelimiterResult) {
+      const {before: decorated, after: afterRight} = rightDelimiterResult
+      return this.generateInlineNodeMatchResult(decorated, afterRight)
+    } else {
+      return {
+        // node: new TextNode(beforeLeft + delimiterRun),
+        node: new TextNode(delimiterRun),
+        remaining: afterLeft,
+      }
+    }
+  }
+
+  // override me
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  static generateInlineNodeMatchResult(decoratedStr: string, remaining: string): InlineNodeMatchResult | null {
+    return null
+  }
+}
+
+export class HighlightNode extends DecoratorNode {
+  static delimiterRun = '=='
+  static higherPriorityNodeTypes = []
+
+  static generateInlineNodeMatchResult(decoratedStr: string, remaining: string): InlineNodeMatchResult | null {
+    return {
+      node: new HighlightNode(decoratedStr),
+      remaining,
+    }
+  }
+
+  render(parent: InlineNode): string {
+    return `<mark>${super.render(parent)}</mark>`
+  }
+}
+
+export class SubScriptNode extends DecoratorNode {
+  static delimiterRun = '~'
+  static higherPriorityNodeTypes = []
+
+  static generateInlineNodeMatchResult(decoratedStr: string, remaining: string): InlineNodeMatchResult | null {
+    return {
+      node: new SubScriptNode(decoratedStr),
+      remaining,
+    }
+  }
+
+  render(parent: InlineNode): string {
+    return `<sub>${super.render(parent)}</sub>`
+  }
+}
+
+export class SuperScriptNode extends DecoratorNode {
+  static delimiterRun = '^'
+  static higherPriorityNodeTypes = []
+
+  static generateInlineNodeMatchResult(decoratedStr: string, remaining: string): InlineNodeMatchResult | null {
+    return {
+      node: new SuperScriptNode(decoratedStr),
+      remaining,
+    }
+  }
+
+  render(parent: InlineNode): string {
+    return `<sup>${super.render(parent)}</sup>`
+  }
+}
+
 namespace EmphNode {
   export enum EmphasisType {
     NONE,
@@ -253,62 +367,6 @@ namespace EmphNode {
 
   type DelimiterChar = '*' | '_'
   type FindDelimiterResult = { before: string, delimiterRun: string, after: string }
-
-  const punctuationRegex = new RegExp(EscapeUtils.mdPunctuationRegex)
-  const whiteSpaceRegex = /\s|^$/
-
-  function analyzeBeforeAfterChar(beforeChar: string, afterChar: string): { bWhiteSpace: boolean, bPunctuation: boolean, aWhiteSpace: boolean, aPunctuation: boolean } {
-    return {
-      bWhiteSpace: !!beforeChar.match(whiteSpaceRegex),
-      bPunctuation: !!beforeChar.match(punctuationRegex),
-      aWhiteSpace: !!afterChar.match(whiteSpaceRegex),
-      aPunctuation: !!afterChar.match(punctuationRegex),
-    }
-  }
-
-  function isLeftDelimiter(beforeChar: string, delimiterRun: string, afterChar: string): boolean {
-    const {bWhiteSpace, bPunctuation, aWhiteSpace, aPunctuation} = analyzeBeforeAfterChar(beforeChar, afterChar)
-
-    // no intraword "_" emphasis
-    if (delimiterRun[0] === '_' && !bWhiteSpace && !bPunctuation && !aWhiteSpace && !aPunctuation) {
-      return false
-    }
-
-    // preceded by whitespace or punctuation, followed by punctuation
-    if ((bWhiteSpace || bPunctuation) && aPunctuation) {
-      return true
-    }
-
-    // not followed by whitespace or punctuation
-    // noinspection RedundantIfStatementJS
-    if (!aWhiteSpace && !aPunctuation) {
-      return true
-    }
-
-    return false
-  }
-
-  function isRightDelimiter(beforeChar: string, delimiterRun: string, afterChar: string): boolean {
-    const {bWhiteSpace, bPunctuation, aWhiteSpace, aPunctuation} = analyzeBeforeAfterChar(beforeChar, afterChar)
-
-    // no intraword "_" emphasis
-    if (delimiterRun[0] === '_' && !bWhiteSpace && !bPunctuation && !aWhiteSpace && !aPunctuation) {
-      return false
-    }
-
-    // preceded by punctuation, followed by whitespace or punctuation
-    if (bPunctuation && (aWhiteSpace || aPunctuation)) {
-      return true
-    }
-
-    // not preceded by whitespace or punctuation
-    // noinspection RedundantIfStatementJS
-    if (!bWhiteSpace && !bPunctuation) {
-      return true
-    }
-
-    return false
-  }
 
   function toDelimiterChar(str: string): DelimiterChar | undefined {
     if (str === '*' || str === '_') {
@@ -354,7 +412,7 @@ namespace EmphNode {
     }
   }
 
-  export class EmphNode extends ContainerInlineNode {
+  export class EmphNode extends DecoratorNode {
     constructor(
       text: string,
       public emphasisType: EmphasisType,
@@ -363,10 +421,13 @@ namespace EmphNode {
       this.children = this.constructChildren(text)
     }
 
+    static higherPriorityNodeTypes = []
+
     static match(line: string): InlineNodeMatchResult | null {
       const leftDelimiterResult = findFirstDelimiter(line, DelimiterFlanking.LEFT, undefined, undefined, 2)
       if (!leftDelimiterResult) return null
       const {before: beforeLeft, delimiterRun, after: afterLeft} = leftDelimiterResult
+      console.assert(beforeLeft === '') // todo
 
       const nearest2RightDelimiter: Array<FindDelimiterResult | null> = [null, null]
       {
@@ -448,10 +509,10 @@ namespace LinkNode {
       let parseResult: ParseNestedBracketsResult | null
       if (line[0] === '!') {
         isImage = true
-        parseResult = parseNestedBrackets(line.substring(1), '[', ']')
+        parseResult = delimiterUtils(line.substring(1), '[', ']')
       } else {
         isImage = false
-        parseResult = parseNestedBrackets(line, '[', ']')
+        parseResult = delimiterUtils(line, '[', ']')
       }
       if (!parseResult) return null
       const {inside, remaining} = parseResult
@@ -473,9 +534,9 @@ namespace LinkNode {
     private static readonly destinationTitleRegex = /^(.*?)(( '(.*[^\\])')|( "(.*[^\\])"))?$/
 
     static match(line: string): InlineNodeMatchResult | null {
-      const parsedResult = parseNestedBrackets(line, '(', ')')
+      const parsedResult = delimiterUtils(line, '(', ')')
       if (parsedResult) {
-        const {inside, remaining} = parseNestedBrackets(line, '(', ')')
+        const {inside, remaining} = delimiterUtils(line, '(', ')')
         const matchResult = inside.match(this.destinationTitleRegex)
         return {
           node: new LinkDestinationNode(matchResult[1], matchResult[4] ?? matchResult[6]),
@@ -504,6 +565,8 @@ namespace LinkNode {
     get linkDestinationNode(): LinkDestinationNode {
       return this.children[1] as LinkDestinationNode
     }
+
+    static higherPriorityNodeTypes = []
 
     static match(line: string): InlineNodeMatchResult | null {
       const linkTextMatchResult = LinkTextNode.match(line)
@@ -544,20 +607,22 @@ namespace LinkNode {
   }
 }
 
-// inline block precedence
+// inline node precedence
 // 1. raw html, autolink, code span
-// 2. link
-// 3. emphasis
+// 2. highlight, subscript, superscript
+// 3. link
+// 4. emphasis
 
-EmphNode.EmphNode.higherPriorityNodeTypes = [
-  RawHTMLNode,
-  AutolinkNode,
-  CodeSpanNode,
-  LinkNode.LinkNode,
+const nodePrecedenceGroups = [
+  [RawHTMLNode, AutolinkNode, CodeSpanNode],
+  [HighlightNode, SubScriptNode, SuperScriptNode],
+  [LinkNode.LinkNode],
+  [EmphNode.EmphNode],
 ]
 
-LinkNode.LinkNode.higherPriorityNodeTypes = [
-  RawHTMLNode,
-  AutolinkNode,
-  CodeSpanNode,
-]
+for (let precedence = 0; precedence < nodePrecedenceGroups.length; precedence++) {
+  const group = nodePrecedenceGroups[precedence]
+  for (let i = 0; i < precedence; i++) {
+    group.forEach((nodeType) => nodeType.higherPriorityNodeTypes.push(...nodePrecedenceGroups[i]))
+  }
+}
