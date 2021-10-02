@@ -45,23 +45,21 @@ export class TextNode extends InlineNode {
   }
 }
 
-// todo unescape markdown
 export class CodeSpanNode extends InlineNode {
   private static readonly backtickRegex = /^`+/
   static higherPriorityNodeTypes = []
 
   static match(line: string): InlineNodeMatchResult | null {
-    const backtickStr = line.match(this.backtickRegex)?.[0]
-    if (!backtickStr) return null
-    const parsedResult = parseNestedBrackets(line, backtickStr, backtickStr)
-    if (parsedResult) {
-      const {inside, remaining} = parsedResult
-      return {
-        node: new CodeSpanNode(inside),
-        remaining,
-      }
-    } else {
-      return null
+    line = EscapeUtils.unEscapeMarkdown(line, true)
+    const delimiterRun = line.match(this.backtickRegex)?.[0]
+    if (!delimiterRun) return null
+
+    const endIndex = line.indexOf(delimiterRun, delimiterRun.length)
+    if (endIndex === -1) return null
+
+    return {
+      node: new CodeSpanNode(line.substring(delimiterRun.length, endIndex)),
+      remaining: EscapeUtils.escapeMarkdown(line.substring(endIndex + delimiterRun.length)),
     }
   }
 
@@ -82,16 +80,21 @@ export class MathNode extends InlineNode {
   static higherPriorityNodeTypes = []
 
   static match(line: string): InlineNodeMatchResult | null {
-    if (line[0] !== '$') return null // todo also $$
-    const parsedResult = parseNestedBrackets(line, '$', '$')
-    if (parsedResult) {
-      const {inside, remaining} = parsedResult
-      return {
-        node: new MathNode(inside),
-        remaining,
-      }
+    let delimiterRun = ''
+    if (line.indexOf('$$') === 0) {
+      delimiterRun = '$$'
+    } else if (line.indexOf('$') === 0) {
+      delimiterRun = '$'
     } else {
       return null
+    }
+
+    const endIndex = line.indexOf(delimiterRun, delimiterRun.length)
+    if (endIndex === -1 || endIndex === delimiterRun.length) return null
+
+    return {
+      node: new MathNode(line.substring(delimiterRun.length, endIndex)),
+      remaining: line.substring(endIndex + delimiterRun.length),
     }
   }
 

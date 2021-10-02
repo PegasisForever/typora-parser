@@ -22,30 +22,7 @@ export type LinkReference = {
 
 function parse(markdown: string): MarkdownParseResult {
   markdown = markdown.replaceAll('\u0000', '\uFFFD')
-  {
-    let newMarkdown = ''
-    let i = 0
-    let escape = false
-    while (i < markdown.length) {
-      const char = markdown[i]
-      if (escape) {
-        const escapedCharIndex = EscapeUtils.mdEscapableChars.indexOf(char)
-        if (escapedCharIndex >= 0) {
-          newMarkdown += EscapeUtils.mdEscapableCharReplaces[escapedCharIndex]
-        } else {
-          newMarkdown += '\\' + char
-        }
-        escape = false
-      } else if (char === '\\') {
-        escape = true
-      } else {
-        newMarkdown += char
-      }
-      i++
-    }
-
-    markdown = newMarkdown
-  }
+  markdown = EscapeUtils.escapeMarkdown(markdown)
 
   let lines = markdown.split('\n')
 

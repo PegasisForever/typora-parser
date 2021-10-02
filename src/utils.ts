@@ -44,4 +44,28 @@ export const EscapeUtils = {
     }
     return str
   },
+  escapeMarkdown: (str: string): string => {
+    let markdown = ''
+    let i = 0
+    let escape = false
+    while (i < str.length) {
+      const char = str[i]
+      if (escape) {
+        const escapedCharIndex = EscapeUtils.mdEscapableChars.indexOf(char)
+        if (escapedCharIndex >= 0) {
+          markdown += EscapeUtils.mdEscapableCharReplaces[escapedCharIndex]
+        } else {
+          markdown += '\\' + char
+        }
+        escape = false
+      } else if (char === '\\') {
+        escape = true
+      } else {
+        markdown += char
+      }
+      i++
+    }
+
+    return markdown
+  },
 }
