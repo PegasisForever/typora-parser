@@ -38,9 +38,9 @@ export const EscapeUtils = {
     }
     return str
   },
-  unEscapeMarkdown: (str: string): string => {
+  unEscapeMarkdown: (str: string, restoreBackSlash?: boolean): string => {
     for (let i = 0; i < mdEscapableChars.length; i++) {
-      str = str.replaceAll(mdEscapableCharReplaces[i], EscapeUtils.escapeHtml(mdEscapableChars[i]))
+      str = str.replaceAll(mdEscapableCharReplaces[i], EscapeUtils.escapeHtml((restoreBackSlash ? '\\' : '') + mdEscapableChars[i]))
     }
     return str
   },

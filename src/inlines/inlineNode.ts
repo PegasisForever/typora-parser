@@ -45,6 +45,7 @@ export class TextNode extends InlineNode {
   }
 }
 
+// todo unescape markdown
 export class CodeSpanNode extends InlineNode {
   private static readonly backtickRegex = /^`+/
   static higherPriorityNodeTypes = []
@@ -75,13 +76,13 @@ export class CodeSpanNode extends InlineNode {
 
 export class MathNode extends InlineNode {
   constructor(text: string) {
-    super(EscapeUtils.unEscapeMarkdown(text))
+    super(EscapeUtils.unEscapeMarkdown(text, true))
   }
 
   static higherPriorityNodeTypes = []
 
   static match(line: string): InlineNodeMatchResult | null {
-    if (line[0] !== '$') return null
+    if (line[0] !== '$') return null // todo also $$
     const parsedResult = parseNestedBrackets(line, '$', '$')
     if (parsedResult) {
       const {inside, remaining} = parsedResult

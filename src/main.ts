@@ -11,6 +11,6 @@ import TyporaParser from './parser'
   console.log(inspect(parseResult.linkReferences, false, null, true))
   console.log(inspect(parseResult.tocEntries, false, null, true))
   const html = parseResult.renderHTML()
-  console.log(html)
+  // console.log(html)
   await fs.writeFile('out.html', html)
 })()

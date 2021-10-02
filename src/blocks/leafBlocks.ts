@@ -1,9 +1,10 @@
 import {Block, BlockMatchResult} from './block'
 import {ListItemBlock} from './containerBlocks'
-import {any} from '../utils'
+import {any, EscapeUtils} from '../utils'
 import {LinkReference} from '../parser'
 import {parseInline} from '../inlines/parseInline'
 import {RootNode} from '../inlines/inlineNode'
+import {mathJax} from '../mathJax'
 
 export class ParagraphBlock extends Block {
   static match(lines: string[]): BlockMatchResult | null {
@@ -125,6 +126,7 @@ export class HeadingBlock extends Block {
   }
 }
 
+// todo unescape markdown
 export class FencedCodeBlock extends Block {
   private static readonly startRegex = /^( {0,3})(`{3,}|~{3,}) *(.*?) *$/
   private _indent = 0
@@ -174,11 +176,62 @@ export class FencedCodeBlock extends Block {
   }
 
   protected renderChildren(): string {
-    return this.lines.join('\n') + '\n'
+    return EscapeUtils.escapeHtml(this.lines.join('\n') + '\n')
   }
 
   render(): string {
     return `<pre><code>${this.renderChildren()}</code></pre>\n`
+  }
+}
+
+export class MathBlock extends Block {
+  // todo what are these two for?
+  public startInfo: string | undefined
+  public endInfo: string | undefined
+
+  private static readonly startEndRegex = /^\$\$\s*({([^}]*)})?\s*$/
+
+  static match(lines: string[]): BlockMatchResult | null {
+    const matchResult = lines[0].match(this.startEndRegex)
+    if (matchResult) {
+      const block = new MathBlock()
+      block.startInfo = matchResult[2]
+      return {
+        block,
+        remaining: lines.slice(1),
+      }
+    } else {
+      return null
+    }
+  }
+
+  append(lines: string[]): string[] | null {
+    const matchResult = lines[0].match(MathBlock.startEndRegex)
+    if (matchResult) {
+      this.endInfo = matchResult[2]
+      this.close()
+      if (lines.length > 1 && lines[1] === '') {
+        return lines.slice(2)
+      } else {
+        return lines.slice(1)
+      }
+    } else {
+      this.lines.push(lines[0])
+      return lines.slice(1)
+    }
+  }
+
+  close(): void {
+    super.close()
+    this.lines = this.lines.map(line => EscapeUtils.unEscapeMarkdown(line, true))
+  }
+
+  render(): string {
+    if (mathJax) {
+      return mathJax.latexToHTML(this.lines.join('\n'), true) + '\n'
+    } else {
+      return `<pre><code>${EscapeUtils.escapeHtml(this.lines.join('\n'))}</code></pre>\n`
+    }
   }
 }
 

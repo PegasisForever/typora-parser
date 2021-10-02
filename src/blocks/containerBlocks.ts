@@ -6,6 +6,7 @@ import {
   HeadingBlock,
   HTMLBlock,
   LinkRefDefBlock,
+  MathBlock,
   ParagraphBlock,
   TableBlock,
   TOCBlock,
@@ -16,6 +17,7 @@ export abstract class ContainerBlock extends Block {
 
   protected constructChildren(lines: string[]): Block[] {
     const blockTypes = [
+      MathBlock,
       QuoteBlock,
       ListBlock,
       TableBlock,
