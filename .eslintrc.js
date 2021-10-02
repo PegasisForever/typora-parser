@@ -11,6 +11,7 @@ module.exports = {
     ],
     rules: {
         '@typescript-eslint/no-namespace': 'off',
+        '@typescript-eslint/no-var-requires': 'off',
         'quotes': ['warn', 'single'],
         'no-inner-declarations': 'off',
         '@typescript-eslint/no-non-null-assertion': 'off',

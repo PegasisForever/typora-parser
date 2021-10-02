@@ -38,4 +38,10 @@ export const EscapeUtils = {
     }
     return str
   },
+  unEscapeMarkdown: (str: string): string => {
+    for (let i = 0; i < mdEscapableChars.length; i++) {
+      str = str.replaceAll(mdEscapableCharReplaces[i], EscapeUtils.escapeHtml(mdEscapableChars[i]))
+    }
+    return str
+  },
 }

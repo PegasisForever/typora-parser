@@ -2,9 +2,8 @@ import {EscapeUtils, last} from '../utils'
 
 export type ParseNestedBracketsResult = { inside: string, remaining: string }
 
-export function delimiterUtils(line: string, startChar: string, endChar: string): ParseNestedBracketsResult | null {
+export function parseNestedBrackets(line: string, startChar: string, endChar: string): ParseNestedBracketsResult | null {
   let parsed = ''
-  let isEscape = false
   let i = 0
   let extraStartCharCount = 0
   while (i < line.length) {
@@ -15,10 +14,6 @@ export function delimiterUtils(line: string, startChar: string, endChar: string)
       } else {
         return null
       }
-    } else if (isEscape) {
-      parsed += char
-    } else if (char === '\\') {
-      isEscape = true
     } else if (char === endChar) {
       if (extraStartCharCount === 0) {
         parsed += char

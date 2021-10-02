@@ -1,5 +1,6 @@
-import {isLeftDelimiter, isRightDelimiter, delimiterUtils, ParseNestedBracketsResult} from './delimiterUtils'
+import {isLeftDelimiter, isRightDelimiter, parseNestedBrackets, ParseNestedBracketsResult} from './delimiterUtils'
 import {EscapeUtils, last} from '../utils'
+import {mathJax} from '../mathJax'
 
 export type InlineNodeMatchResult = { node: InlineNode | InlineNode[], remaining: string }
 
@@ -51,7 +52,7 @@ export class CodeSpanNode extends InlineNode {
   static match(line: string): InlineNodeMatchResult | null {
     const backtickStr = line.match(this.backtickRegex)?.[0]
     if (!backtickStr) return null
-    const parsedResult = delimiterUtils(line, backtickStr, backtickStr)
+    const parsedResult = parseNestedBrackets(line, backtickStr, backtickStr)
     if (parsedResult) {
       const {inside, remaining} = parsedResult
       return {
@@ -69,6 +70,41 @@ export class CodeSpanNode extends InlineNode {
 
   render(): string {
     return `<code>${EscapeUtils.escapeHtml(this.text)}</code>`
+  }
+}
+
+export class MathNode extends InlineNode {
+  constructor(text: string) {
+    super(EscapeUtils.unEscapeMarkdown(text))
+  }
+
+  static higherPriorityNodeTypes = []
+
+  static match(line: string): InlineNodeMatchResult | null {
+    if (line[0] !== '$') return null
+    const parsedResult = parseNestedBrackets(line, '$', '$')
+    if (parsedResult) {
+      const {inside, remaining} = parsedResult
+      return {
+        node: new MathNode(inside),
+        remaining,
+      }
+    } else {
+      return null
+    }
+  }
+
+  rawText(): string {
+    // todo
+    return ''
+  }
+
+  render(): string {
+    if (mathJax) {
+      return mathJax.latexToHTML(this.text)
+    } else {
+      return EscapeUtils.escapeHtml(this.text)
+    }
   }
 }
 
@@ -168,6 +204,7 @@ export abstract class ContainerInlineNode extends InlineNode {
 
   protected constructChildren(text: string): InlineNode[] {
     const inlineNodeTypes = [
+      MathNode,
       RawHTMLNode,
       AutolinkNode,
       CodeSpanNode,
@@ -509,10 +546,10 @@ namespace LinkNode {
       let parseResult: ParseNestedBracketsResult | null
       if (line[0] === '!') {
         isImage = true
-        parseResult = delimiterUtils(line.substring(1), '[', ']')
+        parseResult = parseNestedBrackets(line.substring(1), '[', ']')
       } else {
         isImage = false
-        parseResult = delimiterUtils(line, '[', ']')
+        parseResult = parseNestedBrackets(line, '[', ']')
       }
       if (!parseResult) return null
       const {inside, remaining} = parseResult
@@ -534,9 +571,9 @@ namespace LinkNode {
     private static readonly destinationTitleRegex = /^(.*?)(( '(.*[^\\])')|( "(.*[^\\])"))?$/
 
     static match(line: string): InlineNodeMatchResult | null {
-      const parsedResult = delimiterUtils(line, '(', ')')
+      const parsedResult = parseNestedBrackets(line, '(', ')')
       if (parsedResult) {
-        const {inside, remaining} = delimiterUtils(line, '(', ')')
+        const {inside, remaining} = parseNestedBrackets(line, '(', ')')
         const matchResult = inside.match(this.destinationTitleRegex)
         return {
           node: new LinkDestinationNode(matchResult[1], matchResult[4] ?? matchResult[6]),

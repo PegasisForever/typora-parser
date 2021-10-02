@@ -2,6 +2,7 @@ import {ContainerBlock, RootBlock} from './blocks/containerBlocks'
 import {FrontMatterBlock, HeadingBlock, LinkRefDefBlock} from './blocks/leafBlocks'
 import {Block} from './blocks/block'
 import {EscapeUtils} from './utils'
+import {loadMathJax} from './mathJax'
 
 export class MarkdownParseResult {
   ast: RootBlock
@@ -10,11 +11,7 @@ export class MarkdownParseResult {
   tocEntries: HeadingBlock[]
 
   renderHTML(): string {
-    let html = this.ast.render()
-    for (let i = 0; i < EscapeUtils.mdEscapableChars.length; i++) {
-      html = html.replaceAll(EscapeUtils.mdEscapableCharReplaces[i], EscapeUtils.escapeHtml(EscapeUtils.mdEscapableChars[i]))
-    }
-    return html
+    return EscapeUtils.unEscapeMarkdown(this.ast.render())
   }
 }
 
@@ -23,7 +20,7 @@ export type LinkReference = {
   title?: string,
 }
 
-export default function parse(markdown: string): MarkdownParseResult {
+function parse(markdown: string): MarkdownParseResult {
   markdown = markdown.replaceAll('\u0000', '\uFFFD')
   {
     let newMarkdown = ''
@@ -84,3 +81,10 @@ export default function parse(markdown: string): MarkdownParseResult {
   }
   return result
 }
+
+const TyporaParser = {
+  parse,
+  initLatex: loadMathJax,
+}
+
+export default TyporaParser
