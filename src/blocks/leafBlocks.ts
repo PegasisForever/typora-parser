@@ -132,7 +132,11 @@ export class HeadingBlock extends Block {
   }
 
   genID(context: RenderContext): void {
-    this.id = context.slug(this.inlineNode.rawText(context).toLowerCase())
+    this.id = this.inlineNode.rawText(context).toLowerCase()
+    this.id = this.id.trim()
+    for (const char of HeadingBlock.htmlEscapeChars) {
+      this.id = this.id.replaceAll(char, '-')
+    }
   }
 
   render(context: RenderContext): string {
