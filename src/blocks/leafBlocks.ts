@@ -124,10 +124,6 @@ export class HeadingBlock extends Block {
 
   genID(context: RenderContext): void {
     this.id = context.slug(this.inlineNode.rawText(context).toLowerCase())
-    // id = id.trim()
-    // for (const char of HeadingBlock.htmlEscapeChars) {
-    //   id = id.replaceAll(char, '-')
-    // }
   }
 
   render(context: RenderContext): string {
@@ -135,7 +131,6 @@ export class HeadingBlock extends Block {
   }
 }
 
-// todo unescape markdown
 export class FencedCodeBlock extends Block {
   private static readonly startRegex = /^( {0,3})(`{3,}|~{3,}) *(.*?) *$/
   private _indent = 0
@@ -185,7 +180,7 @@ export class FencedCodeBlock extends Block {
   }
 
   protected renderChildren(): string {
-    return EscapeUtils.escapeHtml(this.lines.join('\n') + '\n')
+    return EscapeUtils.escapeHtml(EscapeUtils.unEscapeMarkdown(this.lines.join('\n'), true) + '\n')
   }
 
   render(): string {
