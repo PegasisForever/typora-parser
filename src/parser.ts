@@ -36,7 +36,7 @@ export class MarkdownParseResult {
 }
 
 export type LinkReference = {
-  destination: string,
+  url: string,
   title?: string,
 }
 

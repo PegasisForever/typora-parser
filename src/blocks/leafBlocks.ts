@@ -506,7 +506,7 @@ export class LinkRefDefBlock extends Block {
     const matchResult = lines[0].match(this.regex)
     if (matchResult) {
       const def = {
-        destination: matchResult[2],
+        url: matchResult[2],
         title: matchResult[4],
       }
       const defBlock = new LinkRefDefBlock()

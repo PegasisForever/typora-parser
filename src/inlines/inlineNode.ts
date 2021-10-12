@@ -571,10 +571,10 @@ namespace LinkNode {
 
   class LinkDestinationNode extends ContainerInlineNode {
     constructor(
-      public destination: string,
+      public url: string,
       public title?: string,
     ) {
-      super(title ?? destination)
+      super(title ?? url)
     }
 
     private static readonly destinationTitleRegex = /^(.*?)(( '(.*[^\\])')|( "(.*[^\\])"))?$/
@@ -597,19 +597,15 @@ namespace LinkNode {
   export class LinkNode extends ContainerInlineNode {
     constructor(
       linkTextNode: LinkTextNode,
-      linkDestinationNode: LinkDestinationNode,
+      public destination: { url: string, title?: string } | string,
       text: string,
     ) {
       super(text)
-      this.children = [linkTextNode, linkDestinationNode]
+      this.children = [linkTextNode]
     }
 
     get linkTextNode(): LinkTextNode {
       return this.children[0] as LinkTextNode
-    }
-
-    get linkDestinationNode(): LinkDestinationNode {
-      return this.children[1] as LinkDestinationNode
     }
 
     static higherPriorityNodeTypes = []
@@ -617,19 +613,42 @@ namespace LinkNode {
     static match(line: string): InlineNodeMatchResult | null {
       const linkTextMatchResult = LinkTextNode.match(line)
       if (!linkTextMatchResult) return null
-      const linkDestinationMatchResult = LinkDestinationNode.match(linkTextMatchResult.remaining)
-      if (!linkDestinationMatchResult) return null
-      const remaining = linkDestinationMatchResult.remaining
-      const nodeText = line.substring(0, line.length - remaining.length)
 
-      return {
-        node: new LinkNode(
-          linkTextMatchResult.node as LinkTextNode,
-          linkDestinationMatchResult.node as LinkDestinationNode,
-          nodeText,
-        ),
-        remaining,
+      const linkDestinationMatchResult = LinkDestinationNode.match(linkTextMatchResult.remaining)
+      if (linkDestinationMatchResult) {
+        const remaining = linkDestinationMatchResult.remaining
+        const nodeText = line.substring(0, line.length - remaining.length)
+
+        return {
+          node: new LinkNode(
+            linkTextMatchResult.node as LinkTextNode,
+            linkDestinationMatchResult.node as LinkDestinationNode,
+            nodeText,
+          ),
+          remaining,
+        }
       }
+
+      const linkReferenceMatchResult = LinkTextNode.match(linkTextMatchResult.remaining)
+      if (linkReferenceMatchResult) {
+        const remaining = linkReferenceMatchResult.remaining
+        const nodeText = line.substring(0, line.length - remaining.length)
+        const linkTextNode = linkTextMatchResult.node as LinkTextNode
+
+        let refText = (linkReferenceMatchResult.node as LinkTextNode).text
+        if (refText === '') refText = linkTextNode.text
+
+        return {
+          node: new LinkNode(
+            linkTextNode,
+            refText,
+            nodeText,
+          ),
+          remaining,
+        }
+      }
+
+      return null
     }
 
     rawText(context: RenderContext): string {
@@ -637,15 +656,29 @@ namespace LinkNode {
     }
 
     render(context: RenderContext): string {
+      let url = ''
+      let title: string | undefined = ''
+      if (typeof this.destination === 'string') {
+        const reference = context.linkReferences.get(this.destination)
+        if (!reference) {
+          return `[${this.linkTextNode.render(context)}][${this.destination}]`
+        }
+        url = reference.url
+        title = reference.title
+      } else {
+        url = this.destination.url
+        title = this.destination.title
+      }
+
       if (this.linkTextNode.isImage) {
-        const srcText = ` src="${EscapeUtils.escapeHtml(this.linkDestinationNode.destination)}"`
+        const srcText = ` src="${EscapeUtils.escapeHtml(url)}"`
         const altText = this.linkTextNode.text ? ` alt="${EscapeUtils.escapeHtml(this.linkTextNode.text)}"` : ''
-        const titleText = this.linkDestinationNode.title ? ` title="${EscapeUtils.escapeHtml(this.linkDestinationNode.title)}"` : ''
+        const titleText = title ? ` title="${EscapeUtils.escapeHtml(title)}"` : ''
 
         return `<img${srcText} referrerpolicy="no-referrer"${altText}${titleText}>`
       } else {
-        const hrefText = ` href='${EscapeUtils.escapeHtml(this.linkDestinationNode.destination)}'`
-        const titleText = this.linkDestinationNode.title ? ` title='${EscapeUtils.escapeHtml(this.linkDestinationNode.title)}'` : ''
+        const hrefText = ` href='${EscapeUtils.escapeHtml(url)}'`
+        const titleText = title ? ` title='${EscapeUtils.escapeHtml(title)}'` : ''
 
         return `<a${hrefText}${titleText}>${this.linkTextNode.render(context)}</a>`
       }
