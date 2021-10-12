@@ -120,8 +120,8 @@ export class AutolinkNode extends InlineNode {
     super(url)
   }
 
-  private static readonly bracketAutolinkRegex = /^<(([a-z0-9+.\-_]{2,32}:)|(www\.))[^ <>]+>/i
-  private static readonly noBracketAutolinkRegex = /^((https:|http:)[^ <>]+)|(www\.[^ <>]+\.[^ <>]+)/i
+  private static readonly bracketAutolinkRegex = /^<(([a-z0-9+.\-_]{2,32}:)|(www\.))[^ <>()]+>/i
+  private static readonly noBracketAutolinkRegex = /^((https:|http:)[^ <>()]+)|(www\.[^ <>()]+\.[^ <>()]+)/i
   private static readonly bracketAutolinkEmailRegex = /^<[a-z0-9+.\-_]+@[a-z0-9+.\-_]+>/
   private static readonly noBracketAutolinkEmailRegex = /^[a-z0-9+.\-_]+@[a-z0-9+.\-_]+\.(com|edu|net|org|au|ca|cn|co|de|fm|io|jp|me|ru|tv|us)/i
   static higherPriorityNodeTypes = []
@@ -468,7 +468,6 @@ namespace EmphNode {
       const leftDelimiterResult = findFirstDelimiter(line, DelimiterFlanking.LEFT, undefined, undefined, 2)
       if (!leftDelimiterResult) return null
       const {before: beforeLeft, delimiterRun, after: afterLeft} = leftDelimiterResult
-      console.assert(beforeLeft === '') // todo
 
       const nearest2RightDelimiter: Array<FindDelimiterResult | null> = [null, null]
       {

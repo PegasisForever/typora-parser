@@ -88,16 +88,25 @@ export class HeadingBlock extends Block {
 
   static match(lines: string[]): BlockMatchResult | null {
     let regexMatchResult
-    if (lines.length >= 2 && lines[1] === '' && (regexMatchResult = lines[0].match(this.regex))) {
+    if ((regexMatchResult = lines[0].match(this.regex))) {
       const heading = new HeadingBlock()
       heading.lines.push(lines[0])
       heading.content = regexMatchResult[2]
       heading.level = regexMatchResult[1].length
       heading.close()
-      return {
-        block: heading,
-        remaining: lines.slice(2),
+
+      if (lines.length > 1 && lines[1] === '') {
+        return {
+          block: heading,
+          remaining: lines.slice(2),
+        }
+      } else {
+        return {
+          block: heading,
+          remaining: lines.slice(1),
+        }
       }
+
     } else {
       return null
     }

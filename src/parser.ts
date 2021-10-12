@@ -20,11 +20,13 @@ export type LinkReference = {
   title?: string,
 }
 
+const newLineRegex = /\r\n|\n/
+
 function parse(markdown: string): MarkdownParseResult {
   markdown = markdown.replaceAll('\u0000', '\uFFFD')
   markdown = EscapeUtils.escapeMarkdown(markdown)
 
-  let lines = markdown.split('\n')
+  let lines = markdown.split(newLineRegex)
 
   const {frontMatter, remaining} = FrontMatterBlock.process(lines)
   lines = remaining

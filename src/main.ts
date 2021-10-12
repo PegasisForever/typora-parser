@@ -2,7 +2,11 @@ import * as fs from 'fs/promises'
 import {inspect} from 'util'
 import TyporaParser from './parser'
 
-(async () => {
+console.assert = function (condition, msg) {
+  if (!condition) throw new Error('Assertion failed' + (msg ? ` ${msg}` : ''))
+}
+
+;(async () => {
   const md = await fs.readFile('test.md', {encoding: 'utf8'})
   await TyporaParser.initLatex()
   const parseResult = TyporaParser.parse(md)
