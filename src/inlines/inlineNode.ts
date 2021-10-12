@@ -46,6 +46,46 @@ export class TextNode extends InlineNode {
   }
 }
 
+export class FootnoteNode extends InlineNode {
+  // todo don't match at line start
+  private static readonly regex = /^\[\^([^\]]+)]/
+  static higherPriorityNodeTypes = []
+
+  static match(line: string): InlineNodeMatchResult | null {
+    const matchResult = line.match(this.regex)
+    if (matchResult) {
+      const node = new FootnoteNode(matchResult[1])
+      return {
+        node,
+        remaining: line.substring(matchResult[0].length),
+      }
+    }
+
+    return null
+  }
+
+  rawText(): string {
+    return this.text
+  }
+
+  render(context: RenderContext): string {
+    const footnoteDef = context.footnoteReferences.get(this.text)
+    if (footnoteDef) {
+      const hrefPostfix = footnoteDef.referencedPlaces.length === 0 ? '' : `-${footnoteDef.referencedPlaces.length}`
+      const href = {
+        refHref: `ref-footnote-${footnoteDef.index}${hrefPostfix}`,
+        defHref: `dfref-footnote-${footnoteDef.index}${hrefPostfix}`,
+      }
+      footnoteDef.referencedPlaces.push(href)
+      let html = `<a href='#${href.defHref}' name='${href.refHref}'>${footnoteDef.index}</a>`
+      html = `<sup class='md-footnote'>${html}</sup>`
+      return html
+    } else {
+      return this.text
+    }
+  }
+}
+
 export class CodeSpanNode extends InlineNode {
   private static readonly backtickRegex = /^`+/
   static higherPriorityNodeTypes = []
@@ -217,6 +257,7 @@ export abstract class ContainerInlineNode extends InlineNode {
       SubScriptNode,
       SuperScriptNode,
       LinkNode.LinkNode,
+      FootnoteNode,
       EmphNode.EmphNode,
     ]
 
@@ -696,7 +737,7 @@ const nodePrecedenceGroups = [
   [RawHTMLNode, AutolinkNode, CodeSpanNode],
   [HighlightNode, SubScriptNode, SuperScriptNode],
   [LinkNode.LinkNode],
-  [EmphNode.EmphNode],
+  [EmphNode.EmphNode, FootnoteNode],
 ]
 
 for (let precedence = 0; precedence < nodePrecedenceGroups.length; precedence++) {

@@ -58,17 +58,26 @@ export class DividerBlock extends Block {
   private static readonly regex = /^ {0,3}((\*[ \t]*){3,}|(-[ \t]*){3,}|(_[ \t]*){3,})$/
 
   static match(lines: string[]): BlockMatchResult | null {
-    if (lines.length >= 2 && lines[1] === '' && lines[0].match(this.regex)) {
+    const matchResult = lines[0].match(this.regex)
+    if (matchResult) {
       const divider = new DividerBlock()
       divider.lines.push(lines[0])
       divider.close()
-      return {
-        block: divider,
-        remaining: lines.slice(2),
+
+      if (lines.length > 1 && lines[1] === '') {
+        return {
+          block: divider,
+          remaining: lines.slice(2),
+        }
+      } else {
+        return {
+          block: divider,
+          remaining: lines.slice(1),
+        }
       }
-    } else {
-      return null
     }
+
+    return null
   }
 
   append(): string[] | null {
@@ -535,6 +544,58 @@ export class LinkRefDefBlock extends Block {
 
   render(): string {
     return ''
+  }
+}
+
+export class FootnoteDefBlock extends Block {
+  label: string
+  private static readonly regex = /^\[\^([^\]]+)]: *(.+)$/
+
+  static match(lines: string[]): BlockMatchResult | null {
+    const matchResult = lines[0].match(this.regex)
+    if (matchResult) {
+      const block = new FootnoteDefBlock()
+      block.label = matchResult[1]
+      block.lines.push(matchResult[2])
+      block.close()
+
+      if (lines.length > 1 && lines[1] === '') {
+        return {
+          block,
+          remaining: lines.slice(2),
+        }
+      } else {
+        return {
+          block,
+          remaining: lines.slice(1),
+        }
+      }
+    }
+    return null
+  }
+
+  close(): void {
+    super.close()
+    this.inlineNode = parseInline(this.lines[0])
+  }
+
+  append(): string[] | null {
+    return null
+  }
+
+  render(context: RenderContext): string {
+    if (context.stage === 'footnote') {
+      const footnoteRefs = context.footnoteReferences.get(this.label)!
+      let html = this.renderChildren(context)
+      html = `<span class='md-fn-count'>${footnoteRefs.index}</span> ${html}`
+      for (const {refHref, defHref} of footnoteRefs.referencedPlaces) {
+        html += ` <a name='${defHref}' href='#${refHref}' title='back to document' class='reversefootnote' >↩</a>`
+      }
+      html = `<div class='footnote-line'>${html}</div>`
+      return html
+    } else {
+      return ''
+    }
   }
 }
 

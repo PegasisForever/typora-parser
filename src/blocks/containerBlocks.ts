@@ -3,6 +3,7 @@ import {any, last} from '../utils'
 import {
   DividerBlock,
   FencedCodeBlock,
+  FootnoteDefBlock,
   HeadingBlock,
   HTMLBlock,
   LinkRefDefBlock,
@@ -22,6 +23,7 @@ export abstract class ContainerBlock extends Block {
       QuoteBlock,
       ListBlock,
       TableBlock,
+      FootnoteDefBlock,
       LinkRefDefBlock,
       TOCBlock,
       HTMLBlock.HTMLBlock,
@@ -334,5 +336,27 @@ export class ListBlock extends ContainerBlock {
     } else {
       return `<ul>\n${this.renderChildren(context)}\n</ul>\n`
     }
+  }
+}
+
+export class FootnotesAreaBlock extends ContainerBlock {
+  constructor(footnoteDefBlocks: FootnoteDefBlock[]) {
+    super()
+    this.children = footnoteDefBlocks
+    this.close()
+  }
+
+  append(): string[] | null {
+    return null
+  }
+
+  render(context: RenderContext): string {
+    context.stage = 'footnote'
+    let html = this.children.map(c => {
+      context.parent = this
+      return c.render(context)
+    }).join('\n')
+    html = `<div class='footnotes-area'  ><hr/>\n${html}</div>`
+    return html
   }
 }
