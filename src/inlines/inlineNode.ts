@@ -1,6 +1,7 @@
 import {isLeftDelimiter, isRightDelimiter, parseNestedBrackets, ParseNestedBracketsResult} from './delimiterUtils'
 import {EscapeUtils, last} from '../utils'
 import {mathJax} from '../mathJax'
+import {RenderContext} from '../parser'
 
 export type InlineNodeMatchResult = { node: InlineNode | InlineNode[], remaining: string }
 
@@ -28,9 +29,9 @@ export abstract class InlineNode {
     throw new Error('Not Implemented')
   }
 
-  abstract rawText(parent: InlineNode): string
+  abstract rawText(context: RenderContext): string
 
-  abstract render(parent: InlineNode): string
+  abstract render(context: RenderContext): string
 }
 
 export class TextNode extends InlineNode {
@@ -270,13 +271,18 @@ export abstract class ContainerInlineNode extends InlineNode {
     return inlineNodes
   }
 
-  rawText(): string {
-    return this.children.map(it => it.rawText(this)).join('')
+  rawText(context: RenderContext): string {
+    return this.children.map(it => {
+      context.parent = this
+      return it.rawText(context)
+    }).join('')
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  render(parent: InlineNode): string {
-    return this.children.map(it => it.render(this)).join('')
+  render(context: RenderContext): string {
+    return this.children.map(it => {
+      context.parent = this
+      return it.render(context)
+    }).join('')
   }
 }
 
@@ -357,8 +363,8 @@ export class HighlightNode extends DecoratorNode {
     }
   }
 
-  render(parent: InlineNode): string {
-    return `<mark>${super.render(parent)}</mark>`
+  render(context: RenderContext): string {
+    return `<mark>${super.render(context)}</mark>`
   }
 }
 
@@ -373,8 +379,8 @@ export class SubScriptNode extends DecoratorNode {
     }
   }
 
-  render(parent: InlineNode): string {
-    return `<sub>${super.render(parent)}</sub>`
+  render(context: RenderContext): string {
+    return `<sub>${super.render(context)}</sub>`
   }
 }
 
@@ -389,8 +395,8 @@ export class SuperScriptNode extends DecoratorNode {
     }
   }
 
-  render(parent: InlineNode): string {
-    return `<sup>${super.render(parent)}</sup>`
+  render(context: RenderContext): string {
+    return `<sup>${super.render(context)}</sup>`
   }
 }
 
@@ -526,9 +532,9 @@ namespace EmphNode {
       }
     }
 
-    render(parent: InlineNode): string {
+    render(context: RenderContext): string {
       const tag = this.emphasisType === EmphasisType.ITALIC ? 'em' : 'strong'
-      return `<${tag}>${super.render(parent)}</${tag}>`
+      return `<${tag}>${super.render(context)}</${tag}>`
     }
   }
 }
@@ -626,11 +632,11 @@ namespace LinkNode {
       }
     }
 
-    rawText(): string {
-      return this.linkTextNode.rawText()
+    rawText(context: RenderContext): string {
+      return this.linkTextNode.rawText(context)
     }
 
-    render(): string {
+    render(context: RenderContext): string {
       if (this.linkTextNode.isImage) {
         const srcText = ` src="${EscapeUtils.escapeHtml(this.linkDestinationNode.destination)}"`
         const altText = this.linkTextNode.text ? ` alt="${EscapeUtils.escapeHtml(this.linkTextNode.text)}"` : ''
@@ -641,7 +647,7 @@ namespace LinkNode {
         const hrefText = ` href='${EscapeUtils.escapeHtml(this.linkDestinationNode.destination)}'`
         const titleText = this.linkDestinationNode.title ? ` title='${EscapeUtils.escapeHtml(this.linkDestinationNode.title)}'` : ''
 
-        return `<a${hrefText}${titleText}>${this.linkTextNode.render(this)}</a>`
+        return `<a${hrefText}${titleText}>${this.linkTextNode.render(context)}</a>`
       }
     }
   }

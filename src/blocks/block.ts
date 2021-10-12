@@ -1,4 +1,5 @@
 import {RootNode} from '../inlines/inlineNode'
+import {RenderContext} from '../parser'
 
 export type BlockMatchResult = { block: Block, remaining: string[] }
 
@@ -18,13 +19,14 @@ export abstract class Block {
   // return consumed string[] if successfully appended
   abstract append(lines: string[]): string[] | null
 
-  protected renderChildren(): string {
+  protected renderChildren(context: RenderContext): string {
+    context.parent = this
     if (this.inlineNode) {
-      return this.inlineNode.render(null)
+      return this.inlineNode.render(context)
     } else {
       return this.lines.join('')
     }
   }
 
-  abstract render(parent: Block): string
+  abstract render(context: RenderContext): string
 }

@@ -1,7 +1,7 @@
 import {Block, BlockMatchResult} from './block'
 import {ListItemBlock} from './containerBlocks'
 import {any, EscapeUtils} from '../utils'
-import {LinkReference} from '../parser'
+import {LinkReference, RenderContext} from '../parser'
 import {parseInline} from '../inlines/parseInline'
 import {RootNode} from '../inlines/inlineNode'
 import {mathJax} from '../mathJax'
@@ -41,14 +41,14 @@ export class ParagraphBlock extends Block {
     this.inlineNode = parseInline(this.lines.join('\n'))
   }
 
-  render(parent: Block): string {
-    if (parent instanceof ListItemBlock && !parent.isLoose) {
-      return this.renderChildren()
+  render(context: RenderContext): string {
+    if (context.parent instanceof ListItemBlock && !context.parent.isLoose) {
+      return this.renderChildren(context)
     } else {
       if (this.lines.length === 0 || (this.lines.length === 1 && this.lines[0] === '')) {
         return '<p>&nbsp;</p>\n'
       } else {
-        return `<p>${this.renderChildren()}</p>\n`
+        return `<p>${this.renderChildren(context)}</p>\n`
       }
     }
   }
@@ -85,6 +85,7 @@ export class HeadingBlock extends Block {
   private static readonly htmlEscapeChars = [' ', '<', '>', '&', '\'', '"', '\u00A0']
   content = ''
   level: 1 | 2 | 3 | 4 | 5 | 6
+  id: string | null = null
 
   static match(lines: string[]): BlockMatchResult | null {
     let regexMatchResult
@@ -121,17 +122,16 @@ export class HeadingBlock extends Block {
     this.inlineNode = parseInline(this.content)
   }
 
-  getID(): string {
-    let id = this.inlineNode.rawText().toLowerCase()
-    id = id.trim()
-    for (const char of HeadingBlock.htmlEscapeChars) {
-      id = id.replaceAll(char, '-')
-    }
-    return id
+  genID(context: RenderContext): void {
+    this.id = context.slug(this.inlineNode.rawText(context).toLowerCase())
+    // id = id.trim()
+    // for (const char of HeadingBlock.htmlEscapeChars) {
+    //   id = id.replaceAll(char, '-')
+    // }
   }
 
-  render(): string {
-    return `<h${this.level} id='${this.getID()}'>${this.renderChildren()}</h${this.level}>\n`
+  render(context: RenderContext): string {
+    return `<h${this.level} id='${this.id}'>${this.renderChildren(context)}</h${this.level}>\n`
   }
 }
 

@@ -3,6 +3,22 @@ import {FrontMatterBlock, HeadingBlock, LinkRefDefBlock} from './blocks/leafBloc
 import {Block} from './blocks/block'
 import {EscapeUtils} from './utils'
 import {loadMathJax} from './mathJax'
+import GithubSlugger from 'github-slugger'
+import {InlineNode} from './inlines/inlineNode'
+
+export class RenderContext {
+  parent: Block | InlineNode | null = null
+  private slugger = new GithubSlugger()
+
+  constructor(
+    public linkReferences: Map<string, LinkReference>
+  ) {
+  }
+
+  slug(str: string): string {
+    return this.slugger.slug(str)
+  }
+}
 
 export class MarkdownParseResult {
   ast: RootBlock
@@ -11,7 +27,11 @@ export class MarkdownParseResult {
   tocEntries: HeadingBlock[]
 
   renderHTML(): string {
-    return EscapeUtils.unEscapeMarkdown(this.ast.render())
+    const context = new RenderContext(this.linkReferences)
+    for (const heading of this.tocEntries) {
+      heading.genID(context)
+    }
+    return EscapeUtils.unEscapeMarkdown(this.ast.render(context))
   }
 }
 

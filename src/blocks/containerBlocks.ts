@@ -11,6 +11,7 @@ import {
   TableBlock,
   TOCBlock,
 } from './leafBlocks'
+import {RenderContext} from '../parser'
 
 export abstract class ContainerBlock extends Block {
   children: Block[] = []
@@ -76,8 +77,11 @@ export abstract class ContainerBlock extends Block {
     return children
   }
 
-  protected renderChildren(): string {
-    return this.children.map(it => it.render(this)).join('')
+  protected renderChildren(context: RenderContext): string {
+    return this.children.map(it => {
+      context.parent = this
+      return it.render(context)
+    }).join('')
   }
 }
 
@@ -97,8 +101,8 @@ export class RootBlock extends ContainerBlock {
     return []
   }
 
-  render(): string {
-    return this.renderChildren()
+  render(context: RenderContext): string {
+    return this.renderChildren(context)
   }
 }
 
@@ -135,8 +139,8 @@ export class QuoteBlock extends ContainerBlock {
     this.children = this.constructChildren(lines)
   }
 
-  render(): string {
-    return `<blockquote>${this.renderChildren()}</blockquote>\n`
+  render(context: RenderContext): string {
+    return `<blockquote>${this.renderChildren(context)}</blockquote>\n`
   }
 }
 
@@ -242,9 +246,9 @@ export class ListItemBlock extends ContainerBlock {
     this.children = this.constructChildren(this.lines)
   }
 
-  render(): string {
+  render(context: RenderContext): string {
     const checkboxStr = this.isCheckbox ? `<input type='checkbox' ${this.isChecked ? 'checked' : ''}/>` : ''
-    return `<li>${checkboxStr}${this.renderChildren()}</li>\n`
+    return `<li>${checkboxStr}${this.renderChildren(context)}</li>\n`
   }
 }
 
@@ -323,12 +327,12 @@ export class ListBlock extends ContainerBlock {
     this.isLoose = this.isLoose
   }
 
-  render(): string {
+  render(context: RenderContext): string {
     if (this.isOrdered) {
       const startStr = this.startNumber !== 1 ? ` start='${this.startNumber}' ` : ''
-      return `<ol${startStr}>\n${this.renderChildren()}\n</ol>\n`
+      return `<ol${startStr}>\n${this.renderChildren(context)}\n</ol>\n`
     } else {
-      return `<ul>\n${this.renderChildren()}\n</ul>\n`
+      return `<ul>\n${this.renderChildren(context)}\n</ul>\n`
     }
   }
 }
