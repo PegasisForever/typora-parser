@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises'
 import {inspect} from 'util'
 import {TyporaParser} from './parser'
+import mathJaxWrapper from 'typora-parser-mathjax'
 
 console.assert = function (condition, msg) {
   if (!condition) throw new Error('Assertion failed' + (msg ? ` ${msg}` : ''))
@@ -8,6 +9,7 @@ console.assert = function (condition, msg) {
 
 ;(async () => {
   const md = await fs.readFile('test.md', {encoding: 'utf8'})
+  TyporaParser.registerMathJaxWrapper(mathJaxWrapper)
   const parseResult = TyporaParser.parse(md)
 
   console.log(inspect(parseResult.ast, false, null, true))

@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/typora-parser2.iml" filepath="$PROJECT_DIR$/.idea/typora-parser2.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/typora-parser.iml" filepath="$PROJECT_DIR$/.idea/typora-parser.iml" />
     </modules>
   </component>
 </project>

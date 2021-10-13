@@ -6,6 +6,7 @@ specifiers:
   '@typescript-eslint/parser': ^4.31.2
   eslint: ^7.32.0
   typescript: ^4.3.5
+  typora-parser-mathjax: link:../typora-parser-mathjax
 
 devDependencies:
   '@types/node': 15.14.5
@@ -13,6 +14,7 @@ devDependencies:
   '@typescript-eslint/parser': 4.31.2_eslint@7.32.0+typescript@4.3.5
   eslint: 7.32.0
   typescript: 4.3.5
+  typora-parser-mathjax: link:../typora-parser-mathjax
 
 packages:
 
