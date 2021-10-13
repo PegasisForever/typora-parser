@@ -1,5 +1,5 @@
 import {isLeftDelimiter, isRightDelimiter, parseNestedBrackets, ParseNestedBracketsResult} from './delimiterUtils'
-import {EscapeUtils, last} from '../utils'
+import {EscapeUtils, last, removeAt} from '../utils'
 import {RenderContext} from '../parser'
 import emojis from '../emojis.json'
 
@@ -342,6 +342,18 @@ export abstract class ContainerInlineNode extends InlineNode {
     if (buffer !== '') {
       inlineNodes.push(new TextNode(buffer))
     }
+
+    // merge text nodes
+    let i = 0
+    while (i < inlineNodes.length - 1) {
+      if (inlineNodes[i] instanceof TextNode && inlineNodes[i + 1] instanceof TextNode) {
+        inlineNodes[i].text += inlineNodes[i + 1].text
+        removeAt(inlineNodes, i + 1)
+      } else {
+        i++
+      }
+    }
+
     return inlineNodes
   }
 
