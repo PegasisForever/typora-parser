@@ -12,6 +12,11 @@ export function any<T>(list: T[], condition: (it: T) => boolean): boolean {
   return false
 }
 
+export function replaceAll(target: string, oldStr: string, newStr: string): string {
+  const escapedOldStr = oldStr.replace(/[.*+\-?^${}()|[\]\\]/g, '\\$&')
+  return target.replace(new RegExp(escapedOldStr, 'g'), newStr)
+}
+
 // replace escape characters with reserved unicode so it get treated like normal text characters while parsing
 const mdEscapableChars = '!"#$&\'()*+-.<=>[\\]^_`{|}~'
 const mdEscapableCharReplaces = String.fromCodePoint(...Array.from(mdEscapableChars).map((_, i) => 0xE000 + i))
@@ -34,13 +39,13 @@ export const EscapeUtils = {
   htmlEscapableCharReplaces,
   escapeHtml: (str: string): string => {
     for (let i = 0; i < htmlEscapableChars.length; i++) {
-      str = str.replaceAll(htmlEscapableChars[i], htmlEscapableCharReplaces[i])
+      str = replaceAll(str, htmlEscapableChars[i], htmlEscapableCharReplaces[i])
     }
     return str
   },
   unEscapeMarkdown: (str: string, restoreBackSlash?: boolean): string => {
     for (let i = 0; i < mdEscapableChars.length; i++) {
-      str = str.replaceAll(mdEscapableCharReplaces[i], EscapeUtils.escapeHtml((restoreBackSlash ? '\\' : '') + mdEscapableChars[i]))
+      str = replaceAll(str, mdEscapableCharReplaces[i], EscapeUtils.escapeHtml((restoreBackSlash ? '\\' : '') + mdEscapableChars[i]))
     }
     return str
   },

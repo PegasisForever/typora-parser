@@ -1,3 +1,10 @@
+import {mathjax} from 'mathjax-full/js/mathjax'
+import {TeX} from 'mathjax-full/js/input/tex'
+import {SVG} from 'mathjax-full/js/output/svg'
+import {liteAdaptor} from 'mathjax-full/js/adaptors/liteAdaptor'
+import {RegisterHTMLHandler} from 'mathjax-full/js/handlers/html'
+import {AllPackages} from 'mathjax-full/js/input/tex/AllPackages'
+
 export interface MathJaxWrapper {
   latexToHTML: (str: string, display?: boolean) => string,
 }
@@ -111,15 +118,8 @@ const texMacros = {
 // todo find and install mathjax extensions
 const texPackages = ['require', 'base', 'action', 'ams', 'amscd', 'bbox', 'boldsymbol', 'braket', 'bussproofs', 'cancel', 'cases', 'centernot', 'color', 'colortbl', 'empheq', 'enclose', 'extpfeil', 'gensymb', 'html', 'mathtools', 'mhchem', 'newcommand', 'noerrors', 'noundefined', 'upgreek', 'unicode', 'verb', 'configmacros', 'tagformat', 'textcomp', 'textmacros', 'noundefined', 'autoload', 'physics', 'textmacros', 'xypic']
 
-export async function loadMathJax(): Promise<void> {
+export function loadMathJax(): void {
   if (mathJax !== null) return
-  const {mathjax} = await require('mathjax-full/js/mathjax.js')
-  const {TeX} = await require('mathjax-full/js/input/tex.js')
-  const {SVG} = await require('mathjax-full/js/output/svg.js')
-  const {liteAdaptor} = await require('mathjax-full/js/adaptors/liteAdaptor.js')
-  const {RegisterHTMLHandler} = await require('mathjax-full/js/handlers/html.js')
-
-  const {AllPackages} = await require('mathjax-full/js/input/tex/AllPackages.js')
 
   const adaptor = liteAdaptor()
   RegisterHTMLHandler(adaptor)

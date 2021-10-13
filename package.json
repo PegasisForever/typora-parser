@@ -1,7 +1,8 @@
 {
   "name": "typora-parser2",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "./build/src/parser.js",
+  "types": "./build/src/parser.d.ts",
   "author": "pegasis",
   "license": "MIT",
   "scripts": {

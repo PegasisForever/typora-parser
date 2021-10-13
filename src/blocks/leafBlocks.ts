@@ -1,6 +1,6 @@
 import {Block, BlockMatchResult} from './block'
 import {ListItemBlock} from './containerBlocks'
-import {any, EscapeUtils} from '../utils'
+import {any, EscapeUtils, replaceAll} from '../utils'
 import {LinkReference, RenderContext} from '../parser'
 import {parseInline} from '../inlines/parseInline'
 import {RootNode} from '../inlines/inlineNode'
@@ -135,7 +135,7 @@ export class HeadingBlock extends Block {
     this.id = this.inlineNode.rawText(context).toLowerCase()
     this.id = this.id.trim()
     for (const char of HeadingBlock.htmlEscapeChars) {
-      this.id = this.id.replaceAll(char, '-')
+      this.id = replaceAll(this.id, char, '-')
     }
   }
 

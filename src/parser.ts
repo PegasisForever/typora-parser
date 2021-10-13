@@ -1,7 +1,7 @@
 import {ContainerBlock, FootnotesAreaBlock, RootBlock} from './blocks/containerBlocks'
 import {FootnoteDefBlock, FrontMatterBlock, HeadingBlock, LinkRefDefBlock} from './blocks/leafBlocks'
 import {Block} from './blocks/block'
-import {EscapeUtils} from './utils'
+import {EscapeUtils, replaceAll} from './utils'
 import {loadMathJax} from './mathJax'
 import {InlineNode} from './inlines/inlineNode'
 
@@ -74,7 +74,8 @@ export type LinkReference = {
 const newLineRegex = /\r\n|\n/
 
 function parse(markdown: string): MarkdownParseResult {
-  markdown = markdown.replaceAll('\u0000', '\uFFFD')
+  loadMathJax()
+  markdown = replaceAll(markdown, '\u0000', '\uFFFD')
   markdown = EscapeUtils.escapeMarkdown(markdown)
 
   let lines = markdown.split(newLineRegex)
@@ -123,7 +124,6 @@ function parse(markdown: string): MarkdownParseResult {
 
 const TyporaParser = {
   parse,
-  initLatex: loadMathJax,
 }
 
 export default TyporaParser

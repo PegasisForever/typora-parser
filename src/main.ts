@@ -8,7 +8,6 @@ console.assert = function (condition, msg) {
 
 ;(async () => {
   const md = await fs.readFile('test.md', {encoding: 'utf8'})
-  await TyporaParser.initLatex()
   const parseResult = TyporaParser.parse(md)
 
   console.log(inspect(parseResult.ast, false, null, true))
