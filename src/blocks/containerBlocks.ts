@@ -142,7 +142,8 @@ export class QuoteBlock extends ContainerBlock {
   }
 
   render(context: RenderContext): string {
-    return `<blockquote>${this.renderChildren(context)}</blockquote>\n`
+    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+    return `<blockquote>${this.renderChildren(context)}</blockquote>${newLine}`
   }
 }
 
@@ -176,8 +177,10 @@ export class ListItemBlock extends ContainerBlock {
   }
 
   get isLoose(): boolean {
-    if (!this._isLoose) {
-      if (this.children.length === 1 && this.children[0] instanceof ParagraphBlock) {
+    if (this._isLoose === null) {
+      if (this.isCheckbox) {
+        this._isLoose = true
+      } else if (this.children.length === 1 && this.children[0] instanceof ParagraphBlock) {
         this._isLoose = false
       } else {
         this._isLoose = any(this.children, it => {
@@ -249,8 +252,9 @@ export class ListItemBlock extends ContainerBlock {
   }
 
   render(context: RenderContext): string {
+    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
     const checkboxStr = this.isCheckbox ? `<input type='checkbox' ${this.isChecked ? 'checked' : ''}/>` : ''
-    return `<li>${checkboxStr}${this.renderChildren(context)}</li>\n`
+    return `<li>${checkboxStr}${this.renderChildren(context)}</li>${newLine}`
   }
 }
 
@@ -330,11 +334,12 @@ export class ListBlock extends ContainerBlock {
   }
 
   render(context: RenderContext): string {
+    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
     if (this.isOrdered) {
       const startStr = this.startNumber !== 1 ? ` start='${this.startNumber}' ` : ''
-      return `<ol${startStr}>\n${this.renderChildren(context)}\n</ol>\n`
+      return `<ol${startStr}>${newLine}${this.renderChildren(context)}${newLine}</ol>${newLine}`
     } else {
-      return `<ul>\n${this.renderChildren(context)}\n</ul>\n`
+      return `<ul>${newLine}${this.renderChildren(context)}${newLine}</ul>${newLine}`
     }
   }
 }
@@ -352,12 +357,13 @@ export class FootnotesAreaBlock extends ContainerBlock {
 
   render(context: RenderContext): string {
     if (this.children.length === 0) return ''
+    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
     context.stage = 'footnote'
     let html = this.children.map(c => {
       context.parent = this
       return c.render(context)
     }).join('\n')
-    html = `<div class='footnotes-area'  ><hr/>\n${html}</div>`
+    html = `<div class='footnotes-area'  ><hr/>${newLine}${html}</div>`
     return html
   }
 }
