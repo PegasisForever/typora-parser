@@ -223,13 +223,8 @@ export class AutolinkNode extends InlineNode {
     return this.text
   }
 
-  render(): string {
-    const escapedText = EscapeUtils.escapeHtml(this.text)
-    if (this.isEmail) {
-      return `<a href='mailto:${escapedText}' target='_blank' class='url'>${escapedText}</a>`
-    } else {
-      return `<a href='${escapedText}' target='_blank' class='url'>${escapedText}</a>`
-    }
+  render(context: RenderContext): string {
+    return `<a href='${context.renderOption.urlResolver(this.text, this.isEmail ? 'email' : 'link')}' target='_blank' class='url'>${EscapeUtils.escapeHtml(this.text)}</a>`
   }
 }
 
@@ -757,13 +752,13 @@ namespace LinkNode {
       }
 
       if (this.linkTextNode.isImage) {
-        const srcText = ` src="${EscapeUtils.escapeHtml(url)}"`
+        const srcText = ` src="${context.renderOption.urlResolver(url, 'link')}"`
         const altText = this.linkTextNode.text ? ` alt="${EscapeUtils.escapeHtml(this.linkTextNode.text)}"` : ''
         const titleText = title ? ` title="${EscapeUtils.escapeHtml(title)}"` : ''
 
         return `<img${srcText} referrerpolicy="no-referrer"${altText}${titleText}>`
       } else {
-        const hrefText = ` href='${EscapeUtils.escapeHtml(url)}'`
+        const hrefText = ` href='${context.renderOption.urlResolver(url, 'image')}'`
         const titleText = title ? ` title='${EscapeUtils.escapeHtml(title)}'` : ''
 
         return `<a${hrefText}${titleText}>${this.linkTextNode.render(context)}</a>`

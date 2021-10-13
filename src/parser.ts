@@ -27,6 +27,8 @@ export class RenderContext {
   }
 }
 
+export type UrlResolver = (url: string, type: 'link' | 'image' | 'email') => string
+
 export type RenderOption = {
   vanillaHTML: boolean,     // true -> no typora-specific classes, typora export HTML (without styles)
   includeHead: boolean,     // true -> include head and body tag
@@ -34,6 +36,7 @@ export type RenderOption = {
   css: string | null,       // only used when includeHead = true
   codeRenderer: CodeRenderer | null,    // only used when vanillaHTML = false
   latexRenderer: LatexRenderer | null,  // only used when vanillaHTML = false
+  urlResolver: UrlResolver,
 }
 
 const defaultRenderOption: RenderOption = {
@@ -43,6 +46,13 @@ const defaultRenderOption: RenderOption = {
   css: null,
   codeRenderer: null,
   latexRenderer: null,
+  urlResolver: (url: string, type: 'link' | 'image' | 'email') => {
+    if (type === 'email') {
+      return `mailto:${url}`
+    } else {
+      return url
+    }
+  },
 }
 
 export class TyporaParseResult {
