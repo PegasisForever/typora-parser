@@ -351,6 +351,7 @@ export class FootnotesAreaBlock extends ContainerBlock {
   }
 
   render(context: RenderContext): string {
+    if (this.children.length === 0) return ''
     context.stage = 'footnote'
     let html = this.children.map(c => {
       context.parent = this

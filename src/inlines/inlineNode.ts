@@ -2,6 +2,7 @@ import {isLeftDelimiter, isRightDelimiter, parseNestedBrackets, ParseNestedBrack
 import {EscapeUtils, last} from '../utils'
 import {mathJax} from '../mathJax'
 import {RenderContext} from '../parser'
+import emojis from '../emojis.json'
 
 export type InlineNodeMatchResult = { node: InlineNode | InlineNode[], remaining: string }
 
@@ -43,6 +44,33 @@ export class TextNode extends InlineNode {
 
   render(): string {
     return EscapeUtils.escapeHtml(this.text)
+  }
+}
+
+export class EmojiNode extends InlineNode {
+  static higherPriorityNodeTypes = []
+
+  static match(line: string): InlineNodeMatchResult | null {
+    const parseResult = parseNestedBrackets(line, ':', ':')
+    if (parseResult) {
+      const emoji = emojis[`:${parseResult.inside}:`]
+      if (emoji) {
+        return {
+          node: new EmojiNode(emoji),
+          remaining: parseResult.remaining,
+        }
+      }
+    }
+
+    return null
+  }
+
+  rawText(): string {
+    return ''
+  }
+
+  render(): string {
+    return this.text
   }
 }
 
@@ -252,6 +280,7 @@ export abstract class ContainerInlineNode extends InlineNode {
       MathNode,
       RawHTMLNode,
       AutolinkNode,
+      EmojiNode,
       CodeSpanNode,
       HighlightNode,
       SubScriptNode,
@@ -734,7 +763,7 @@ namespace LinkNode {
 // 4. emphasis
 
 const nodePrecedenceGroups = [
-  [RawHTMLNode, AutolinkNode, CodeSpanNode],
+  [RawHTMLNode, AutolinkNode, CodeSpanNode, EmojiNode],
   [HighlightNode, SubScriptNode, SuperScriptNode],
   [LinkNode.LinkNode],
   [EmphNode.EmphNode, FootnoteNode],
