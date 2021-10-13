@@ -17,6 +17,10 @@ export function replaceAll(target: string, oldStr: string, newStr: string): stri
   return target.replace(new RegExp(escapedOldStr, 'g'), newStr)
 }
 
+export function merge<T, U>(target: T, source: U): T & U {
+  return Object.assign(Object.assign({}, target), source)
+}
+
 // replace escape characters with reserved unicode so it get treated like normal text characters while parsing
 const mdEscapableChars = '!"#$&\'()*+-.<=>[\\]^_`{|}~'
 const mdEscapableCharReplaces = String.fromCodePoint(...Array.from(mdEscapableChars).map((_, i) => 0xE000 + i))

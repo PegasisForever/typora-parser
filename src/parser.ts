@@ -1,7 +1,7 @@
 import {ContainerBlock, FootnotesAreaBlock, RootBlock} from './blocks/containerBlocks'
 import {FootnoteDefBlock, FrontMatterBlock, HeadingBlock, LinkRefDefBlock} from './blocks/leafBlocks'
 import {Block} from './blocks/block'
-import {EscapeUtils, replaceAll} from './utils'
+import {EscapeUtils, merge, replaceAll} from './utils'
 import {InlineNode} from './inlines/inlineNode'
 
 export type FootnoteReference = {
@@ -16,6 +16,7 @@ export class RenderContext {
 
   constructor(
     public linkReferences: Map<string, LinkReference>,
+    public renderOption: RenderOption,
     footnoteDefBlocks: FootnoteDefBlock[],
   ) {
     this.footnoteReferences = new Map(footnoteDefBlocks.map((it, i) => [it.label, {
@@ -25,7 +26,21 @@ export class RenderContext {
   }
 }
 
-export class MarkdownParseResult {
+export type RenderOption = {
+  vanillaHTML: boolean,     // true -> no typora-specific classes, typora export HTML (without styles)
+  includeHead: boolean,     // true -> include head and body tag
+  title: string | null,     // only used when includeHead = true
+  css: string | null,       // only used when includeHead = true
+}
+
+const defaultRenderOption: RenderOption = {
+  vanillaHTML: false,
+  includeHead: false,
+  title: null,
+  css: null,
+}
+
+export class TyporaParseResult {
   ast: RootBlock
   frontMatter: string | null = null
   linkReferences: Map<string, LinkReference>
@@ -56,8 +71,8 @@ export class MarkdownParseResult {
     }
   }
 
-  renderHTML(): string {
-    const context = new RenderContext(this.linkReferences, this.footnoteDefBlocks)
+  renderHTML(option?: Partial<RenderOption>): string {
+    const context = new RenderContext(this.linkReferences, merge(defaultRenderOption, option), this.footnoteDefBlocks)
     this.genHeadingIDs(context)
     let html = this.ast.render(context)
     html += new FootnotesAreaBlock(this.footnoteDefBlocks).render(context)
@@ -74,7 +89,7 @@ const newLineRegex = /\r\n|\n/
 
 export let mathJaxWrapper: MathJaxWrapper | null = null
 
-function parse(markdown: string): MarkdownParseResult {
+function parse(markdown: string): TyporaParseResult {
   markdown = replaceAll(markdown, '\u0000', '\uFFFD')
   markdown = EscapeUtils.escapeMarkdown(markdown)
 
@@ -109,7 +124,7 @@ function parse(markdown: string): MarkdownParseResult {
 
   const tocEntries = rootBlock.children.filter(it => it instanceof HeadingBlock) as HeadingBlock[]
 
-  const result = new MarkdownParseResult()
+  const result = new TyporaParseResult()
   result.ast = rootBlock
   result.linkReferences = linkReferences
   result.headings = headings
