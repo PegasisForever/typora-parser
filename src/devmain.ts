@@ -17,8 +17,10 @@ console.assert = function (condition, msg) {
   console.log(inspect(parseResult.tocEntries, false, null, true))
   const html = parseResult.renderHTML({
     vanillaHTML: false,
+    includeHead: true,
     latexRenderer: new MathJaxRenderer(),
     codeRenderer: new HighlightJsRenderer(),
+    extraHeadTags: await fs.readFile('extraHeadTags.txt', {encoding: 'utf8'}),
   })
   // console.log(html)
   await fs.writeFile('out.html', html)

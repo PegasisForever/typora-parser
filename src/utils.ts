@@ -21,6 +21,18 @@ export function replaceAll(target: string, oldStr: string, newStr: string): stri
   return target.replace(new RegExp(escapedOldStr, 'g'), newStr)
 }
 
+export function matchAll(str: string, rx: string | RegExp): string[] {
+  if (typeof rx === 'string') {
+    rx = rx.replace(/[.*+\-?^${}()|[\]\\]/g, '\\$&')
+    rx = new RegExp(rx, 'g')
+  }
+  rx = new RegExp(rx)
+  let cap = []
+  const all = []
+  while ((cap = rx.exec(str)) !== null) all.push(cap)
+  return all
+}
+
 export function merge<T, U>(target: T, source: U): T & U {
   return Object.assign(Object.assign({}, target), source)
 }

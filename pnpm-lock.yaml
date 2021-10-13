@@ -10,7 +10,6 @@ specifiers:
   highlight.js: ^11.2.0
   mathjax-full: '3'
   typescript: ^4.3.5
-  typora-parser-mathjax: link:../typora-parser-mathjax
 
 dependencies:
   highlight.js: 11.2.0
@@ -24,7 +23,6 @@ devDependencies:
   '@typescript-eslint/parser': 4.31.2_eslint@7.32.0+typescript@4.3.5
   eslint: 7.32.0
   typescript: 4.3.5
-  typora-parser-mathjax: link:../typora-parser-mathjax
 
 packages:
 

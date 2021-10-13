@@ -1,7 +1,7 @@
 import {ContainerBlock, FootnotesAreaBlock, RootBlock} from './blocks/containerBlocks'
 import {FootnoteDefBlock, FrontMatterBlock, HeadingBlock, LinkRefDefBlock} from './blocks/leafBlocks'
 import {Block} from './blocks/block'
-import {EscapeUtils, merge, replaceAll} from './utils'
+import {EscapeUtils, matchAll, merge, replaceAll} from './utils'
 import {InlineNode} from './inlines/inlineNode'
 
 export type FootnoteReference = {
@@ -33,7 +33,7 @@ export type RenderOption = {
   vanillaHTML: boolean,     // true -> no typora-specific classes, typora export HTML (without styles)
   includeHead: boolean,     // true -> include head and body tag
   title: string | null,     // only used when includeHead = true
-  css: string | null,       // only used when includeHead = true
+  extraHeadTags: string | null,         // only used when includeHead = true
   codeRenderer: CodeRenderer | null,    // only used when vanillaHTML = false
   latexRenderer: LatexRenderer | null,  // only used when vanillaHTML = false
   urlResolver: UrlResolver,
@@ -43,7 +43,7 @@ const defaultRenderOption: RenderOption = {
   vanillaHTML: false,
   includeHead: false,
   title: null,
-  css: null,
+  extraHeadTags: null,
   codeRenderer: null,
   latexRenderer: null,
   urlResolver: (url: string, type: 'link' | 'image' | 'email') => {
@@ -56,6 +56,8 @@ const defaultRenderOption: RenderOption = {
 }
 
 export class TyporaParseResult {
+  private static readonly includeWhenExportRegex = /^\s*@include-when-export\s+url\((.+)\);\s*$/gm
+  private static readonly fontFaceRegex = /@font-face\s+{.*?}/gs
   ast: RootBlock
   frontMatter: string | null = null
   linkReferences: Map<string, LinkReference>
@@ -86,6 +88,20 @@ export class TyporaParseResult {
     }
   }
 
+  private getCSSTags(css: string | null): string {
+    if (css === null) return ''
+    const includeWhenExportUrls: string[] = []
+    for (const [, includeWhenExportUrl] of matchAll(css, TyporaParseResult.includeWhenExportRegex)) {
+      includeWhenExportUrls.push(includeWhenExportUrl)
+    }
+
+    css = css.replace(TyporaParseResult.fontFaceRegex, '')
+    return `${includeWhenExportUrls.map(url => `<link href='${url}' rel='stylesheet' type='text/css' />`).join('\n')}
+<style type='text/css'>
+${css}
+</style>`
+  }
+
   renderHTML(option?: Partial<RenderOption>): string {
     const context = new RenderContext(this.linkReferences, merge(defaultRenderOption, option), this.tocEntries, this.footnoteDefBlocks)
     this.genHeadingIDs(context)
@@ -94,6 +110,30 @@ export class TyporaParseResult {
     html = EscapeUtils.unEscapeMarkdown(html)
     if (!context.renderOption.vanillaHTML) {
       html = `<div class='typora-export-content'>\n<div id='write'  class=''>${html}</div></div>\n`
+    }
+    if (context.renderOption.includeHead) {
+      const titleHtml = context.renderOption.title === null ? '' : `<title>${context.renderOption.title}</title>`
+      if (context.renderOption.vanillaHTML) {
+        html = `<!doctype html>
+<html>
+<head>
+<meta charset='UTF-8'><meta name='viewport' content='width=device-width initial-scale=1'>
+${context.renderOption.extraHeadTags ?? ''}
+${titleHtml}
+</head>
+<body>${html}</body>
+</html>`
+      } else {
+        html = `<!doctype html>
+<html>
+<head>
+<meta charset='UTF-8'><meta name='viewport' content='width=device-width initial-scale=1'>
+${context.renderOption.extraHeadTags ?? ''}
+${titleHtml}
+</head>
+<body class='typora-export'>${html}</body>
+</html>`
+      }
     }
     return html
   }
