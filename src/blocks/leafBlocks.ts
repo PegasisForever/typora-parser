@@ -207,12 +207,8 @@ export class FencedCodeBlock extends Block {
   }
 
   render(context: RenderContext): string {
-    if (context.renderOption.codeRenderer && !context.renderOption.vanillaHTML) {
-      context.parent = this
-      return context.renderOption.codeRenderer.render(this.renderChildren(), this.infoString === '' ? undefined : this.infoString, context)
-    } else {
-      return `<pre><code>${EscapeUtils.escapeHtml(this.renderChildren())}\n</code></pre>\n`
-    }
+    context.parent = this
+    return context.renderOption.codeRenderer.render(this.renderChildren(), this.infoString === '' ? undefined : this.infoString, context)
   }
 }
 
@@ -259,12 +255,9 @@ export class MathBlock extends Block {
   }
 
   render(context: RenderContext): string {
-    if (context.renderOption.latexRenderer) {
-      context.parent = this
-      return context.renderOption.latexRenderer.render(this.lines.join('\n'), true, context) + '\n'
-    } else {
-      return `<pre><code>${EscapeUtils.escapeHtml(this.lines.join('\n'))}</code></pre>\n`
-    }
+    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+    context.parent = this
+    return context.renderOption.latexRenderer.render(this.lines.join('\n'), context) + newLine
   }
 }
 

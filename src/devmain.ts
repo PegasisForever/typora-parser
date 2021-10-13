@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises'
 import {inspect} from 'util'
-import {TyporaParser} from './parser'
-import MathJaxRenderer from './mathJax'
-import HighlightJsRenderer from './highlightJs'
+import TyporaParser from './index'
+import MathJaxRenderer from './plugins/MathJaxRenderer'
+import HighlightJsRenderer from './plugins/HighlightJsRenderer'
 
 console.assert = function (condition, msg) {
   if (!condition) throw new Error('Assertion failed' + (msg ? ` ${msg}` : ''))

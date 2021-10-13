@@ -5,7 +5,9 @@ import {liteAdaptor, LiteAdaptor} from 'mathjax-full/js/adaptors/liteAdaptor'
 import {RegisterHTMLHandler} from 'mathjax-full/js/handlers/html'
 import {AllPackages} from 'mathjax-full/js/input/tex/AllPackages'
 import {MathDocument} from 'mathjax-full/js/core/MathDocument'
-import {LatexRenderer} from './parser'
+import {RenderContext} from '../parser'
+import {Block} from '../blocks/block'
+import {LatexRenderer} from '../RenderOption'
 
 // todo find and install mathjax extensions
 const texPackages = ['require', 'base', 'action', 'ams', 'amscd', 'bbox', 'boldsymbol', 'braket', 'bussproofs', 'cancel', 'cases', 'centernot', 'color', 'colortbl', 'empheq', 'enclose', 'extpfeil', 'gensymb', 'html', 'mathtools', 'mhchem', 'newcommand', 'noerrors', 'noundefined', 'upgreek', 'unicode', 'verb', 'configmacros', 'tagformat', 'textcomp', 'textmacros', 'noundefined', 'autoload', 'physics', 'textmacros', 'xypic']
@@ -130,7 +132,7 @@ export default class MathJaxRenderer implements LatexRenderer {
     this.document = mathjax.document('', {InputJax: tex, OutputJax: svg})
   }
 
-  render(str: string, block: boolean | undefined): string {
+  render(str: string, context: RenderContext): string {
     const node = this.document.convert(str, {
       display: true,
       em: 16,
@@ -140,7 +142,7 @@ export default class MathJaxRenderer implements LatexRenderer {
 
     let html = this.adaptor.innerHTML(node)
     html = `<mjx-container class="MathJax" jax="SVG" style="position: relative;">${html}</mjx-container>`
-    if (block) {
+    if (context.parent instanceof Block) {
       html = `<div class="md-rawblock-container md-math-container" contenteditable="false" tabindex="-1">${html}</div>`
       html = `<div contenteditable="false" spellcheck="false" class="mathjax-block md-end-block md-math-block md-rawblock" mdtype="math_block">${html}</div>`
     } else {

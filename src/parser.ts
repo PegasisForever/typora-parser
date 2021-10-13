@@ -1,8 +1,14 @@
 import {ContainerBlock, FootnotesAreaBlock, RootBlock} from './blocks/containerBlocks'
 import {FootnoteDefBlock, FrontMatterBlock, HeadingBlock, LinkRefDefBlock} from './blocks/leafBlocks'
 import {Block} from './blocks/block'
-import {EscapeUtils, matchAll, merge, replaceAll} from './utils'
+import {EscapeUtils, replaceAll} from './utils'
 import {InlineNode} from './inlines/inlineNode'
+import {defaultRenderOption, RenderOption} from './RenderOption'
+
+export type LinkReference = {
+  url: string,
+  title?: string,
+}
 
 export type FootnoteReference = {
   index: number,
@@ -27,37 +33,7 @@ export class RenderContext {
   }
 }
 
-export type UrlResolver = (url: string, type: 'link' | 'image' | 'email') => string
-
-export type RenderOption = {
-  vanillaHTML: boolean,     // true -> no typora-specific classes, typora export HTML (without styles)
-  includeHead: boolean,     // true -> include head and body tag
-  title: string | null,     // only used when includeHead = true
-  extraHeadTags: string | null,         // only used when includeHead = true
-  codeRenderer: CodeRenderer | null,    // only used when vanillaHTML = false
-  latexRenderer: LatexRenderer | null,  // only used when vanillaHTML = false
-  urlResolver: UrlResolver,
-}
-
-const defaultRenderOption: RenderOption = {
-  vanillaHTML: false,
-  includeHead: false,
-  title: null,
-  extraHeadTags: null,
-  codeRenderer: null,
-  latexRenderer: null,
-  urlResolver: (url: string, type: 'link' | 'image' | 'email') => {
-    if (type === 'email') {
-      return `mailto:${url}`
-    } else {
-      return url
-    }
-  },
-}
-
 export class TyporaParseResult {
-  private static readonly includeWhenExportRegex = /^\s*@include-when-export\s+url\((.+)\);\s*$/gm
-  private static readonly fontFaceRegex = /@font-face\s+{.*?}/gs
   ast: RootBlock
   frontMatter: string | null = null
   linkReferences: Map<string, LinkReference>
@@ -88,22 +64,8 @@ export class TyporaParseResult {
     }
   }
 
-  private getCSSTags(css: string | null): string {
-    if (css === null) return ''
-    const includeWhenExportUrls: string[] = []
-    for (const [, includeWhenExportUrl] of matchAll(css, TyporaParseResult.includeWhenExportRegex)) {
-      includeWhenExportUrls.push(includeWhenExportUrl)
-    }
-
-    css = css.replace(TyporaParseResult.fontFaceRegex, '')
-    return `${includeWhenExportUrls.map(url => `<link href='${url}' rel='stylesheet' type='text/css' />`).join('\n')}
-<style type='text/css'>
-${css}
-</style>`
-  }
-
   renderHTML(option?: Partial<RenderOption>): string {
-    const context = new RenderContext(this.linkReferences, merge(defaultRenderOption, option), this.tocEntries, this.footnoteDefBlocks)
+    const context = new RenderContext(this.linkReferences, Object.assign(defaultRenderOption(), option), this.tocEntries, this.footnoteDefBlocks)
     this.genHeadingIDs(context)
     let html = this.ast.render(context)
     html += new FootnotesAreaBlock(this.footnoteDefBlocks).render(context)
@@ -139,14 +101,9 @@ ${titleHtml}
   }
 }
 
-export type LinkReference = {
-  url: string,
-  title?: string,
-}
-
 const newLineRegex = /\r\n|\n/
 
-function parse(markdown: string): TyporaParseResult {
+export function parse(markdown: string): TyporaParseResult {
   markdown = replaceAll(markdown, '\u0000', '\uFFFD')
   markdown = EscapeUtils.escapeMarkdown(markdown)
 
@@ -193,18 +150,3 @@ function parse(markdown: string): TyporaParseResult {
   }
   return result
 }
-
-export interface CodeRenderer {
-  render: (code: string, language: string | undefined, context: RenderContext) => string,
-}
-
-export interface LatexRenderer {
-  render: (str: string, block: boolean, context: RenderContext) => string,
-}
-
-const TyporaParser = {
-  parse,
-}
-
-export {TyporaParser}
-

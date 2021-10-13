@@ -1,4 +1,9 @@
-import {CodeRenderer, LatexRenderer, UrlResolver, RenderOption, TyporaParser, TyporaParseResult} from './parser'
+import {parse, TyporaParseResult} from './parser'
+import {CodeRenderer, LatexRenderer, RenderOption, UrlResolver} from './RenderOption'
+
+const TyporaParser = {
+  parse,
+}
 
 export default TyporaParser
 
