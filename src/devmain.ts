@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises'
 import {inspect} from 'util'
 import {TyporaParser} from './parser'
-import mathJaxRenderer from './mathJax'
-import highlightJsRenderer from './highlightJs'
+import MathJaxRenderer from './mathJax'
+import HighlightJsRenderer from './highlightJs'
 
 console.assert = function (condition, msg) {
   if (!condition) throw new Error('Assertion failed' + (msg ? ` ${msg}` : ''))
@@ -17,8 +17,8 @@ console.assert = function (condition, msg) {
   console.log(inspect(parseResult.tocEntries, false, null, true))
   const html = parseResult.renderHTML({
     vanillaHTML: false,
-    latexRenderer: mathJaxRenderer,
-    codeRenderer: highlightJsRenderer,
+    latexRenderer: new MathJaxRenderer(),
+    codeRenderer: new HighlightJsRenderer(),
   })
   // console.log(html)
   await fs.writeFile('out.html', html)

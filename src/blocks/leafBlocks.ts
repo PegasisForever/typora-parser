@@ -204,7 +204,6 @@ export class FencedCodeBlock extends Block {
     } else {
       return `<pre><code>${EscapeUtils.escapeHtml(this.renderChildren())}\n</code></pre>\n`
     }
-
   }
 }
 
