@@ -1,7 +1,6 @@
 import {isLeftDelimiter, isRightDelimiter, parseNestedBrackets, ParseNestedBracketsResult} from './delimiterUtils'
 import {EscapeUtils, last} from '../utils'
-import {mathJax} from '../mathJax'
-import {RenderContext} from '../parser'
+import {mathJaxWrapper, RenderContext} from '../parser'
 import emojis from '../emojis.json'
 
 export type InlineNodeMatchResult = { node: InlineNode | InlineNode[], remaining: string }
@@ -173,8 +172,8 @@ export class MathNode extends InlineNode {
   }
 
   render(): string {
-    if (mathJax) {
-      return mathJax.latexToHTML(this.text)
+    if (mathJaxWrapper) {
+      return mathJaxWrapper.latexToHTML(this.text)
     } else {
       return EscapeUtils.escapeHtml(this.text)
     }

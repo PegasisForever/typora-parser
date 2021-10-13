@@ -1,8 +1,8 @@
 {
   "name": "typora-parser2",
   "version": "1.0.0",
-  "main": "./build/src/parser.js",
-  "types": "./build/src/parser.d.ts",
+  "main": "./build/src/index.js",
+  "types": "./build/src/index.d.ts",
   "author": "pegasis",
   "license": "MIT",
   "scripts": {
@@ -18,6 +18,5 @@
     "typescript": "^4.3.5"
   },
   "dependencies": {
-    "mathjax-full": "3"
   }
 }

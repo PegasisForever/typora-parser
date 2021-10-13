@@ -1,10 +1,9 @@
 import {Block, BlockMatchResult} from './block'
 import {ListItemBlock} from './containerBlocks'
 import {any, EscapeUtils, replaceAll} from '../utils'
-import {LinkReference, RenderContext} from '../parser'
+import {LinkReference, mathJaxWrapper, RenderContext} from '../parser'
 import {parseInline} from '../inlines/parseInline'
 import {RootNode} from '../inlines/inlineNode'
-import {mathJax} from '../mathJax'
 
 export class ParagraphBlock extends Block {
   static match(lines: string[]): BlockMatchResult | null {
@@ -244,8 +243,8 @@ export class MathBlock extends Block {
   }
 
   render(): string {
-    if (mathJax) {
-      return mathJax.latexToHTML(this.lines.join('\n'), true) + '\n'
+    if (mathJaxWrapper) {
+      return mathJaxWrapper.latexToHTML(this.lines.join('\n'), true) + '\n'
     } else {
       return `<pre><code>${EscapeUtils.escapeHtml(this.lines.join('\n'))}</code></pre>\n`
     }

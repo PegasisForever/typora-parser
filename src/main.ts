@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises'
 import {inspect} from 'util'
-import TyporaParser from './parser'
+import {TyporaParser} from './parser'
 
 console.assert = function (condition, msg) {
   if (!condition) throw new Error('Assertion failed' + (msg ? ` ${msg}` : ''))
