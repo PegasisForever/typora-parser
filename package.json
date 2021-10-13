@@ -1,21 +1,26 @@
 {
   "name": "typora-parser",
   "version": "1.0.0",
-  "main": "./build/src/index.js",
-  "types": "./build/src/index.d.ts",
+  "main": "./build/index.js",
+  "types": "./build/index.d.ts",
   "author": "pegasis",
   "license": "MIT",
   "scripts": {
     "watch": "tsc --watch",
     "build": "tsc",
-    "dev": "node --enable-source-maps build/src/devmain.js"
+    "dev": "node --enable-source-maps build/devmain.js"
   },
   "devDependencies": {
+    "@types/codemirror": "^5.60.5",
+    "@types/jsdom": "^16.2.13",
     "@types/node": "^15.12.5",
     "@typescript-eslint/eslint-plugin": "^4.31.2",
     "@typescript-eslint/parser": "^4.31.2",
     "eslint": "^7.32.0",
-    "typescript": "^4.3.5",
-    "typora-parser-mathjax": "link:../typora-parser-mathjax"
+    "typescript": "^4.3.5"
+  },
+  "dependencies": {
+    "highlight.js": "^11.2.0",
+    "mathjax-full": "3"
   }
 }

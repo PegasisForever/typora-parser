@@ -1,7 +1,7 @@
 import {Block, BlockMatchResult} from './block'
 import {ListItemBlock} from './containerBlocks'
 import {any, EscapeUtils, replaceAll} from '../utils'
-import {LinkReference, mathJaxWrapper, RenderContext} from '../parser'
+import {LinkReference, RenderContext} from '../parser'
 import {parseInline} from '../inlines/parseInline'
 import {RootNode} from '../inlines/inlineNode'
 
@@ -44,10 +44,11 @@ export class ParagraphBlock extends Block {
     if (context.parent instanceof ListItemBlock && !context.parent.isLoose) {
       return this.renderChildren(context)
     } else {
+      const newLine = context.renderOption.vanillaHTML ? '\n' : ''
       if (this.lines.length === 0 || (this.lines.length === 1 && this.lines[0] === '')) {
-        return '<p>&nbsp;</p>\n'
+        return `<p>&nbsp;</p>${newLine}`
       } else {
-        return `<p>${this.renderChildren(context)}</p>\n`
+        return `<p>${this.renderChildren(context)}</p>${newLine}`
       }
     }
   }
@@ -83,8 +84,9 @@ export class DividerBlock extends Block {
     return null
   }
 
-  render(): string {
-    return '<hr />\n'
+  render(context: RenderContext): string {
+    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+    return `<hr />${newLine}`
   }
 }
 
@@ -139,7 +141,8 @@ export class HeadingBlock extends Block {
   }
 
   render(context: RenderContext): string {
-    return `<h${this.level} id='${this.id}'>${this.renderChildren(context)}</h${this.level}>\n`
+    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+    return `<h${this.level} id='${this.id}'>${this.renderChildren(context)}</h${this.level}>${newLine}`
   }
 }
 
@@ -242,9 +245,9 @@ export class MathBlock extends Block {
     this.lines = this.lines.map(line => EscapeUtils.unEscapeMarkdown(line, true))
   }
 
-  render(): string {
-    if (mathJaxWrapper) {
-      return mathJaxWrapper.latexToHTML(this.lines.join('\n'), true) + '\n'
+  render(context: RenderContext): string {
+    if (context.renderOption.latexRenderer) {
+      return context.renderOption.latexRenderer.render(this.lines.join('\n'), true) + '\n'
     } else {
       return `<pre><code>${EscapeUtils.escapeHtml(this.lines.join('\n'))}</code></pre>\n`
     }

@@ -1,5 +1,5 @@
-import {RenderOption, TyporaParser, TyporaParseResult} from './parser'
+import {CodeRenderer, LatexRenderer, RenderOption, TyporaParser, TyporaParseResult} from './parser'
 
 export default TyporaParser
 
-export {TyporaParseResult, RenderOption}
+export {TyporaParseResult, RenderOption, CodeRenderer, LatexRenderer}

@@ -1,6 +1,6 @@
 import {isLeftDelimiter, isRightDelimiter, parseNestedBrackets, ParseNestedBracketsResult} from './delimiterUtils'
 import {EscapeUtils, last} from '../utils'
-import {mathJaxWrapper, RenderContext} from '../parser'
+import {RenderContext} from '../parser'
 import emojis from '../emojis.json'
 
 export type InlineNodeMatchResult = { node: InlineNode | InlineNode[], remaining: string }
@@ -41,8 +41,12 @@ export class TextNode extends InlineNode {
     return this.text
   }
 
-  render(): string {
-    return EscapeUtils.escapeHtml(this.text)
+  render(context: RenderContext): string {
+    if (context.renderOption.vanillaHTML) {
+      return EscapeUtils.escapeHtml(this.text)
+    } else {
+      return `<span>${EscapeUtils.escapeHtml(this.text)}</span>`
+    }
   }
 }
 
@@ -108,7 +112,7 @@ export class FootnoteNode extends InlineNode {
       html = `<sup class='md-footnote'>${html}</sup>`
       return html
     } else {
-      return this.text
+      return EscapeUtils.escapeHtml(this.text)
     }
   }
 }
@@ -171,9 +175,9 @@ export class MathNode extends InlineNode {
     return ''
   }
 
-  render(): string {
-    if (mathJaxWrapper) {
-      return mathJaxWrapper.latexToHTML(this.text)
+  render(context: RenderContext): string {
+    if (context.renderOption.latexRenderer) {
+      return context.renderOption.latexRenderer.render(this.text)
     } else {
       return EscapeUtils.escapeHtml(this.text)
     }

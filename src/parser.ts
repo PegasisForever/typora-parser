@@ -31,6 +31,8 @@ export type RenderOption = {
   includeHead: boolean,     // true -> include head and body tag
   title: string | null,     // only used when includeHead = true
   css: string | null,       // only used when includeHead = true
+  codeRenderer: CodeRenderer | null,    // only used when vanillaHTML = false
+  latexRenderer: LatexRenderer | null,  // only used when vanillaHTML = false
 }
 
 const defaultRenderOption: RenderOption = {
@@ -38,6 +40,8 @@ const defaultRenderOption: RenderOption = {
   includeHead: false,
   title: null,
   css: null,
+  codeRenderer: null,
+  latexRenderer: null,
 }
 
 export class TyporaParseResult {
@@ -76,7 +80,11 @@ export class TyporaParseResult {
     this.genHeadingIDs(context)
     let html = this.ast.render(context)
     html += new FootnotesAreaBlock(this.footnoteDefBlocks).render(context)
-    return EscapeUtils.unEscapeMarkdown(html)
+    html = EscapeUtils.unEscapeMarkdown(html)
+    if (!context.renderOption.vanillaHTML) {
+      html = `<div class='typora-export-content'>\n<div id='write'  class=''>${html}</div></div>\n`
+    }
+    return html
   }
 }
 
@@ -86,8 +94,6 @@ export type LinkReference = {
 }
 
 const newLineRegex = /\r\n|\n/
-
-export let mathJaxWrapper: MathJaxWrapper | null = null
 
 function parse(markdown: string): TyporaParseResult {
   markdown = replaceAll(markdown, '\u0000', '\uFFFD')
@@ -137,17 +143,16 @@ function parse(markdown: string): TyporaParseResult {
   return result
 }
 
-export interface MathJaxWrapper {
-  latexToHTML: (str: string, display?: boolean) => string,
+export interface CodeRenderer {
+  render: (code: string, language?: string) => string,
 }
 
-function registerMathJaxWrapper(wrapper: MathJaxWrapper): void {
-  mathJaxWrapper = wrapper
+export interface LatexRenderer {
+  render: (str: string, block?: boolean) => string,
 }
 
 const TyporaParser = {
   parse,
-  registerMathJaxWrapper,
 }
 
 export {TyporaParser}
