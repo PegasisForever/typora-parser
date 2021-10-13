@@ -195,11 +195,16 @@ export class FencedCodeBlock extends Block {
   }
 
   protected renderChildren(): string {
-    return EscapeUtils.escapeHtml(EscapeUtils.unEscapeMarkdown(this.lines.join('\n'), true) + '\n')
+    return EscapeUtils.unEscapeMarkdown(this.lines.join('\n'), true)
   }
 
-  render(): string {
-    return `<pre><code>${this.renderChildren()}</code></pre>\n`
+  render(context: RenderContext): string {
+    if (context.renderOption.codeRenderer && !context.renderOption.vanillaHTML) {
+      return context.renderOption.codeRenderer.render(this.renderChildren(), this.infoString === '' ? undefined : this.infoString)
+    } else {
+      return `<pre><code>${EscapeUtils.escapeHtml(this.renderChildren())}\n</code></pre>\n`
+    }
+
   }
 }
 

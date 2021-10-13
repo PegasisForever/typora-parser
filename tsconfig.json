@@ -10,8 +10,7 @@
     "allowSyntheticDefaultImports": true
   },
   "exclude": [
-    "node_modules",
-    "src/devmain.ts"
+    "node_modules"
   ],
   "include": [
     "src/**/*"
