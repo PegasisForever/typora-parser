@@ -135,14 +135,22 @@ export class HeadingBlock extends Block {
   genID(context: RenderContext): void {
     this.id = this.inlineNode.rawText(context).toLowerCase()
     this.id = this.id.trim()
+    // todo also replace punctuations, trim '-'
     for (const char of HeadingBlock.htmlEscapeChars) {
       this.id = replaceAll(this.id, char, '-')
     }
   }
 
   render(context: RenderContext): string {
-    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
-    return `<h${this.level} id='${this.id}'>${this.renderChildren(context)}</h${this.level}>${newLine}`
+    if (context.parent instanceof TOCBlock && !context.renderOption.vanillaHTML) {
+      let html = this.renderChildren(context)
+      html = `<a class="md-toc-inner" href="#${this.id}">${html}</a>`
+      html = `<span role="listitem" class="md-toc-item md-toc-h${this.level}">${html}</span>`
+      return html
+    } else {
+      const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+      return `<h${this.level} id='${this.id}'>${this.renderChildren(context)}</h${this.level}>${newLine}`
+    }
   }
 }
 
@@ -347,7 +355,7 @@ export class TableBlock extends Block {
     }
   }
 
-  private renderRow(i: number): string {
+  private renderRow(i: number, context: RenderContext): string {
     const tag = i === 0 ? 'th' : 'td'
 
     function getAlignStyle(align: TableCellAlign): string {
@@ -361,14 +369,17 @@ export class TableBlock extends Block {
       }
     }
 
-    return `<tr>${this.rowsNodes[i].map((node, i) => `<${tag}${getAlignStyle(this.columnAlign[i])}>${node.render(null)}</${tag}>`).join('')}</tr>`
+    return `<tr>${this.rowsNodes[i].map((node, i) => {
+      context.parent = this
+      return `<${tag}${getAlignStyle(this.columnAlign[i])}>${node.render(context)}</${tag}>`
+    }).join('')}</tr>`
   }
 
-  render(): string {
-    const titleStr = `<thead>\n${this.renderRow(0)}</thead>\n`
+  render(context: RenderContext): string {
+    const titleStr = `<thead>\n${this.renderRow(0, context)}</thead>\n`
     let bodyStr = ''
     for (let i = 1; i < this.rows.length; i++) {
-      bodyStr += this.renderRow(i)
+      bodyStr += this.renderRow(i, context)
     }
     bodyStr = `<tbody>${bodyStr}</tbody>\n`
     return `<figure><table>\n${titleStr}${bodyStr}</table></figure>\n`
@@ -636,7 +647,16 @@ export class TOCBlock extends Block {
     return null
   }
 
-  render(): string {
-    return '<div>[TOC]</div>\n'
+  render(context: RenderContext): string {
+    if (context.renderOption.vanillaHTML) {
+      return '<div>[TOC]</div>\n'
+    } else {
+      let html = context.tocEntries.map(heading => {
+        context.parent = this
+        return heading.render(context)
+      }).join('')
+      html = `<div class='md-toc' mdtype='toc'><p class="md-toc-content" role="list">${html}</p></div>`
+      return html
+    }
   }
 }

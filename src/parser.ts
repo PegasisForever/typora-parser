@@ -17,6 +17,7 @@ export class RenderContext {
   constructor(
     public linkReferences: Map<string, LinkReference>,
     public renderOption: RenderOption,
+    public tocEntries: HeadingBlock[],
     footnoteDefBlocks: FootnoteDefBlock[],
   ) {
     this.footnoteReferences = new Map(footnoteDefBlocks.map((it, i) => [it.label, {
@@ -76,7 +77,7 @@ export class TyporaParseResult {
   }
 
   renderHTML(option?: Partial<RenderOption>): string {
-    const context = new RenderContext(this.linkReferences, merge(defaultRenderOption, option), this.footnoteDefBlocks)
+    const context = new RenderContext(this.linkReferences, merge(defaultRenderOption, option), this.tocEntries, this.footnoteDefBlocks)
     this.genHeadingIDs(context)
     let html = this.ast.render(context)
     html += new FootnotesAreaBlock(this.footnoteDefBlocks).render(context)
