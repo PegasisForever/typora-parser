@@ -145,11 +145,11 @@ function parse(markdown: string): TyporaParseResult {
 }
 
 export interface CodeRenderer {
-  render: (code: string, language?: string) => string,
+  render: (code: string, language: string | undefined, context: RenderContext) => string,
 }
 
 export interface LatexRenderer {
-  render: (str: string, block?: boolean) => string,
+  render: (str: string, block: boolean, context: RenderContext) => string,
 }
 
 const TyporaParser = {

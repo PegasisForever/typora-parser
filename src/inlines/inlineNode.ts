@@ -177,7 +177,8 @@ export class MathNode extends InlineNode {
 
   render(context: RenderContext): string {
     if (context.renderOption.latexRenderer) {
-      return context.renderOption.latexRenderer.render(this.text)
+      context.parent = this
+      return context.renderOption.latexRenderer.render(this.text, false, context)
     } else {
       return EscapeUtils.escapeHtml(this.text)
     }

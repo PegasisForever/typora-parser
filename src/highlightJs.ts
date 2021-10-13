@@ -46,7 +46,7 @@ export default class HighlightJsRenderer implements CodeRenderer {
     'hljs-tag': 'cm-tag',
   }
 
-  render(code: string, language?: string): string {
+  render(code: string, language: string | undefined): string {
     let html = hljs.highlight(code, {language}).value
     html = html.split('\n').map(line => {
       for (const [hljsTag, cmTag] of Object.entries(HighlightJsRenderer.classMap)) {

@@ -208,7 +208,8 @@ export class FencedCodeBlock extends Block {
 
   render(context: RenderContext): string {
     if (context.renderOption.codeRenderer && !context.renderOption.vanillaHTML) {
-      return context.renderOption.codeRenderer.render(this.renderChildren(), this.infoString === '' ? undefined : this.infoString)
+      context.parent = this
+      return context.renderOption.codeRenderer.render(this.renderChildren(), this.infoString === '' ? undefined : this.infoString, context)
     } else {
       return `<pre><code>${EscapeUtils.escapeHtml(this.renderChildren())}\n</code></pre>\n`
     }
@@ -259,7 +260,8 @@ export class MathBlock extends Block {
 
   render(context: RenderContext): string {
     if (context.renderOption.latexRenderer) {
-      return context.renderOption.latexRenderer.render(this.lines.join('\n'), true) + '\n'
+      context.parent = this
+      return context.renderOption.latexRenderer.render(this.lines.join('\n'), true, context) + '\n'
     } else {
       return `<pre><code>${EscapeUtils.escapeHtml(this.lines.join('\n'))}</code></pre>\n`
     }
