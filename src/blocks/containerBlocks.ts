@@ -363,7 +363,7 @@ export class FootnotesAreaBlock extends ContainerBlock {
       context.parent = this
       return c.render(context)
     }).join('\n')
-    html = `<div class='footnotes-area'  ><hr/>${newLine}${html}</div>`
+    html = `<div class='footnotes-area'  ><hr/>\n${html}</div>`
     return html
   }
 }

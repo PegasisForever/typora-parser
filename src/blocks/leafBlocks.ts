@@ -371,13 +371,14 @@ export class TableBlock extends Block {
   }
 
   render(context: RenderContext): string {
-    const titleStr = `<thead>\n${this.renderRow(0, context)}</thead>\n`
+    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+    const titleStr = `<thead>${newLine}${this.renderRow(0, context)}</thead>${newLine}`
     let bodyStr = ''
     for (let i = 1; i < this.rows.length; i++) {
       bodyStr += this.renderRow(i, context)
     }
-    bodyStr = `<tbody>${bodyStr}</tbody>\n`
-    return `<figure><table>\n${titleStr}${bodyStr}</table></figure>\n`
+    bodyStr = `<tbody>${bodyStr}</tbody>${newLine}`
+    return `<figure><table>${newLine}${titleStr}${bodyStr}</table></figure>${newLine}`
   }
 }
 
@@ -516,8 +517,9 @@ export namespace HTMLBlock {
       }
     }
 
-    render(): string {
-      return this.lines.join('\n') + '\n'
+    render(context: RenderContext): string {
+      const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+      return this.lines.join('\n') + newLine
     }
   }
 }

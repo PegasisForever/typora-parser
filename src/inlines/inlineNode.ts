@@ -280,8 +280,8 @@ export abstract class ContainerInlineNode extends InlineNode {
       HighlightNode,
       SubScriptNode,
       SuperScriptNode,
-      LinkNode.LinkNode,
       FootnoteNode,
+      LinkNode.LinkNode,
       EmphNode.EmphNode,
     ]
 
@@ -772,8 +772,8 @@ namespace LinkNode {
 const nodePrecedenceGroups = [
   [RawHTMLNode, AutolinkNode, CodeSpanNode, EmojiNode],
   [HighlightNode, SubScriptNode, SuperScriptNode],
-  [LinkNode.LinkNode],
-  [EmphNode.EmphNode, FootnoteNode],
+  [LinkNode.LinkNode, FootnoteNode],
+  [EmphNode.EmphNode],
 ]
 
 for (let precedence = 0; precedence < nodePrecedenceGroups.length; precedence++) {
