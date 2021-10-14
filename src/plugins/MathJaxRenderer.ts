@@ -125,11 +125,17 @@ export default class MathJaxRenderer implements LatexRenderer {
 
   constructor(
     public applyLineBreaks = true,
+    public autoNumbering = false,
   ) {
     this.adaptor = liteAdaptor()
     RegisterHTMLHandler(this.adaptor)
 
-    const tex = new TeX({packages: AllPackages, useLabelIds: true, macros: MathJaxRenderer.texMacros})
+    const tex = new TeX({
+      packages: AllPackages,
+      useLabelIds: true,
+      macros: MathJaxRenderer.texMacros,
+      tags: autoNumbering ? 'ams' : undefined,
+    })
     const svg = new SVG()
     this.document = mathjax.document('', {InputJax: tex, OutputJax: svg})
   }
@@ -146,12 +152,10 @@ export default class MathJaxRenderer implements LatexRenderer {
     })
 
     let html = this.adaptor.innerHTML(node)
-    html = `<mjx-container class="MathJax" jax="SVG" style="position: relative;">${html}</mjx-container>`
     if (context.parent instanceof Block) {
-      html = `<div class="md-rawblock-container md-math-container" contenteditable="false" tabindex="-1">${html}</div>`
-      html = `<div contenteditable="false" spellcheck="false" class="mathjax-block md-end-block md-math-block md-rawblock" mdtype="math_block">${html}</div>`
+      html = `<div contenteditable="false" spellcheck="false" class="mathjax-block md-end-block md-math-block md-rawblock" mdtype="math_block"><div class="md-rawblock-container md-math-container" contenteditable="false" tabindex="-1"><mjx-container class="MathJax" jax="SVG" style="position: relative;" display="true">${html}</mjx-container></div></div>`
     } else {
-      html += `<script type="math/tex">${str}</script>`
+      html = `<mjx-container class="MathJax" jax="SVG" style="position: relative;">${html}</mjx-container><script type="math/tex">${str}</script>`
     }
 
     return html
