@@ -1,14 +1,18 @@
 {
   "name": "typora-parser",
   "version": "1.0.0",
-  "main": "./build/index.js",
-  "types": "./build/index.d.ts",
+  "main": "./build/src/index.js",
+  "types": "./build/src/index.d.ts",
+  "bin": {
+    "typora-export": "./build/bin/typoraExport.js"
+  },
   "author": "pegasis",
   "license": "MIT",
   "scripts": {
     "watch": "tsc --watch",
     "build": "tsc",
-    "dev": "node --enable-source-maps build/devmain.js"
+    "dev": "node --enable-source-maps build/src/devmain.js",
+    "dev-typora-export": "node --enable-source-maps build/bin/typoraExport.js"
   },
   "devDependencies": {
     "@types/codemirror": "^5.60.5",
@@ -20,6 +24,7 @@
     "typescript": "^4.3.5"
   },
   "dependencies": {
+    "commander": "^8.2.0",
     "highlight.js": "^11.2.0",
     "mathjax-full": "3"
   }

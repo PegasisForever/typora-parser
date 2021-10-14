@@ -13,6 +13,8 @@
     "node_modules"
   ],
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "bin/**/*",
+    "package.json"
   ]
 }

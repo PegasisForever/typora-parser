@@ -6,12 +6,14 @@ specifiers:
   '@types/node': ^15.12.5
   '@typescript-eslint/eslint-plugin': ^4.31.2
   '@typescript-eslint/parser': ^4.31.2
+  commander: ^8.2.0
   eslint: ^7.32.0
   highlight.js: ^11.2.0
   mathjax-full: '3'
   typescript: ^4.3.5
 
 dependencies:
+  commander: 8.2.0
   highlight.js: 11.2.0
   mathjax-full: 3.2.0
 
