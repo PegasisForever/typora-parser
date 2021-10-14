@@ -65,7 +65,7 @@ export default class HighlightJsRenderer implements CodeRenderer {
     if (context.renderOptions.vanillaHTML) {
       return `<pre><code>${EscapeUtils.escapeHtml(code)}\n</code></pre>\n`
     } else {
-      const html = hljs.highlight(code, {language}).value
+      const html = hljs.listLanguages().includes(language) ? hljs.highlight(code, {language}).value : hljs.highlightAuto(code).value
       const lines = html.split('\n').map(line => {
         for (const [hljsTag, cmTag] of Object.entries(HighlightJsRenderer.classMap)) {
           line = replaceAll(line, `<span class="${hljsTag}">`, cmTag === '' ? '<span>' : `<span class="${cmTag}">`)

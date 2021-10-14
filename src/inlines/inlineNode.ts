@@ -190,7 +190,7 @@ export class AutolinkNode extends InlineNode {
   }
 
   private static readonly bracketAutolinkRegex = /^<(([a-z0-9+.\-_]{2,32}:)|(www\.))[^ <>()]+>/i
-  private static readonly noBracketAutolinkRegex = /^((https:|http:)[^ <>()]+)|(www\.[^ <>()]+\.[^ <>()]+)/i
+  private static readonly noBracketAutolinkRegex = /^((https:|http:)[^ <>()]+)|^(www\.[^ <>()]+\.[^ <>()]+)/i
   private static readonly bracketAutolinkEmailRegex = /^<[a-z0-9+.\-_]+@[a-z0-9+.\-_]+>/
   private static readonly noBracketAutolinkEmailRegex = /^[a-z0-9+.\-_]+@[a-z0-9+.\-_]+\.(com|edu|net|org|au|ca|cn|co|de|fm|io|jp|me|ru|tv|us)/i
   static higherPriorityNodeTypes = []
