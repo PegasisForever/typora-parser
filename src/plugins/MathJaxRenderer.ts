@@ -123,9 +123,11 @@ export default class MathJaxRenderer implements LatexRenderer {
   private document: MathDocument<any, any, any>
   private adaptor: LiteAdaptor
 
-  constructor() {
-    const adaptor = liteAdaptor()
-    RegisterHTMLHandler(adaptor)
+  constructor(
+    public applyLineBreaks = true,
+  ) {
+    this.adaptor = liteAdaptor()
+    RegisterHTMLHandler(this.adaptor)
 
     const tex = new TeX({packages: AllPackages, useLabelIds: true, macros: MathJaxRenderer.texMacros})
     const svg = new SVG()
@@ -133,6 +135,9 @@ export default class MathJaxRenderer implements LatexRenderer {
   }
 
   render(str: string, context: RenderContext): string {
+    if ((str.includes('\\\\') || str.includes('\\newline')) && this.applyLineBreaks) {
+      str = `\\displaylines{${str}}`
+    }
     const node = this.document.convert(str, {
       display: true,
       em: 16,
