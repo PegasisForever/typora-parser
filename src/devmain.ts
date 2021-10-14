@@ -19,7 +19,7 @@ console.assert = function (condition, msg) {
     vanillaHTML: false,
     includeHead: true,
     latexRenderer: new MathJaxRenderer(),
-    codeRenderer: new HighlightJsRenderer(true),
+    codeRenderer: new HighlightJsRenderer({displayLineNumbers: true}),
     extraHeadTags: await fs.readFile('extraHeadTags.txt', {encoding: 'utf8'}),
   })
   // console.log(html)

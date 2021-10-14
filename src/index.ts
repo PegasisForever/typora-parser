@@ -1,5 +1,5 @@
 import {parse, TyporaParseResult} from './parser'
-import {CodeRenderer, LatexRenderer, RenderOption, UrlResolver} from './RenderOption'
+import {CodeRenderer, LatexRenderer, RenderOptions, UrlResolver} from './RenderOptions'
 
 const TyporaParser = {
   parse,
@@ -7,4 +7,4 @@ const TyporaParser = {
 
 export default TyporaParser
 
-export {CodeRenderer, LatexRenderer, UrlResolver, RenderOption, TyporaParseResult}
+export {CodeRenderer, LatexRenderer, UrlResolver, RenderOptions, TyporaParseResult}

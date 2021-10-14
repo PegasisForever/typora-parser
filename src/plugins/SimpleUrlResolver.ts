@@ -1,4 +1,4 @@
-import {UrlResolver, UrlType} from '../RenderOption'
+import {UrlResolver, UrlType} from '../RenderOptions'
 
 export default class SimpleUrlResolver implements UrlResolver {
   resolve(url: string, type: UrlType): string {

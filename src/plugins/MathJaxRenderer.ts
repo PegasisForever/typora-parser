@@ -7,10 +7,12 @@ import {AllPackages} from 'mathjax-full/js/input/tex/AllPackages'
 import {MathDocument} from 'mathjax-full/js/core/MathDocument'
 import {RenderContext} from '../parser'
 import {Block} from '../blocks/block'
-import {LatexRenderer} from '../RenderOption'
+import {LatexRenderer} from '../RenderOptions'
 
 // todo find and install mathjax extensions
 const texPackages = ['require', 'base', 'action', 'ams', 'amscd', 'bbox', 'boldsymbol', 'braket', 'bussproofs', 'cancel', 'cases', 'centernot', 'color', 'colortbl', 'empheq', 'enclose', 'extpfeil', 'gensymb', 'html', 'mathtools', 'mhchem', 'newcommand', 'noerrors', 'noundefined', 'upgreek', 'unicode', 'verb', 'configmacros', 'tagformat', 'textcomp', 'textmacros', 'noundefined', 'autoload', 'physics', 'textmacros', 'xypic']
+
+type OptionsType = ReturnType<typeof MathJaxRenderer.getDefaultOptions>
 
 export default class MathJaxRenderer implements LatexRenderer {
   private static readonly texMacros = {
@@ -118,15 +120,20 @@ export default class MathJaxRenderer implements LatexRenderer {
     'div': ['\\divsymbol'],
     'Re': ['\\mathfrak{R}'],
   }
+  public static readonly getDefaultOptions = () => ({
+    applyLineBreaks: true,
+    autoNumbering: false,
+  })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private document: MathDocument<any, any, any>
-  private adaptor: LiteAdaptor
+  private readonly adaptor: LiteAdaptor
+  private options: OptionsType
 
   constructor(
-    public applyLineBreaks = true,
-    public autoNumbering = false,
+    options?: Partial<OptionsType>,
   ) {
+    this.options = Object.assign(MathJaxRenderer.getDefaultOptions(), options)
     this.adaptor = liteAdaptor()
     RegisterHTMLHandler(this.adaptor)
 
@@ -134,14 +141,14 @@ export default class MathJaxRenderer implements LatexRenderer {
       packages: AllPackages,
       useLabelIds: true,
       macros: MathJaxRenderer.texMacros,
-      tags: autoNumbering ? 'ams' : undefined,
+      tags: this.options.autoNumbering ? 'ams' : undefined,
     })
     const svg = new SVG()
     this.document = mathjax.document('', {InputJax: tex, OutputJax: svg})
   }
 
   render(str: string, context: RenderContext): string {
-    if ((str.includes('\\\\') || str.includes('\\newline')) && this.applyLineBreaks) {
+    if ((str.includes('\\\\') || str.includes('\\newline')) && this.options.applyLineBreaks) {
       str = `\\displaylines{${str}}`
     }
     const node = this.document.convert(str, {

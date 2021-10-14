@@ -1,7 +1,7 @@
 import {RenderContext} from '../parser'
 import {EscapeUtils} from '../utils'
 import {Block} from '../blocks/block'
-import {LatexRenderer} from '../RenderOption'
+import {LatexRenderer} from '../RenderOptions'
 
 export default class StubLatexRenderer implements LatexRenderer {
   render(str: string, context: RenderContext): string {

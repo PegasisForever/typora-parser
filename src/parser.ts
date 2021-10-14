@@ -3,7 +3,7 @@ import {FootnoteDefBlock, FrontMatterBlock, HeadingBlock, LinkRefDefBlock} from 
 import {Block} from './blocks/block'
 import {EscapeUtils, replaceAll} from './utils'
 import {InlineNode} from './inlines/inlineNode'
-import {defaultRenderOption, RenderOption} from './RenderOption'
+import {getDefaultRenderOptions, RenderOptions} from './RenderOptions'
 
 export type LinkReference = {
   url: string,
@@ -22,7 +22,7 @@ export class RenderContext {
 
   constructor(
     public linkReferences: Map<string, LinkReference>,
-    public renderOption: RenderOption,
+    public renderOptions: RenderOptions,
     public tocEntries: HeadingBlock[],
     footnoteDefBlocks: FootnoteDefBlock[],
   ) {
@@ -64,23 +64,23 @@ export class TyporaParseResult {
     }
   }
 
-  renderHTML(option?: Partial<RenderOption>): string {
-    const context = new RenderContext(this.linkReferences, Object.assign(defaultRenderOption(), option), this.tocEntries, this.footnoteDefBlocks)
+  renderHTML(options?: Partial<RenderOptions>): string {
+    const context = new RenderContext(this.linkReferences, Object.assign(getDefaultRenderOptions(), options), this.tocEntries, this.footnoteDefBlocks)
     this.genHeadingIDs(context)
     let html = this.ast.render(context)
     html += new FootnotesAreaBlock(this.footnoteDefBlocks).render(context)
     html = EscapeUtils.unEscapeMarkdown(html)
-    if (!context.renderOption.vanillaHTML) {
+    if (!context.renderOptions.vanillaHTML) {
       html = `<div class='typora-export-content'>\n<div id='write'  class=''>${html}</div></div>\n`
     }
-    if (context.renderOption.includeHead) {
-      const titleHtml = context.renderOption.title === null ? '' : `<title>${context.renderOption.title}</title>`
-      if (context.renderOption.vanillaHTML) {
+    if (context.renderOptions.includeHead) {
+      const titleHtml = context.renderOptions.title === null ? '' : `<title>${context.renderOptions.title}</title>`
+      if (context.renderOptions.vanillaHTML) {
         html = `<!doctype html>
 <html>
 <head>
 <meta charset='UTF-8'><meta name='viewport' content='width=device-width initial-scale=1'>
-${context.renderOption.extraHeadTags ?? ''}
+${context.renderOptions.extraHeadTags ?? ''}
 ${titleHtml}
 </head>
 <body>${html}</body>
@@ -90,7 +90,7 @@ ${titleHtml}
 <html>
 <head>
 <meta charset='UTF-8'><meta name='viewport' content='width=device-width initial-scale=1'>
-${context.renderOption.extraHeadTags ?? ''}
+${context.renderOptions.extraHeadTags ?? ''}
 ${titleHtml}
 </head>
 <body class='typora-export'>${html}</body>

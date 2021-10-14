@@ -142,7 +142,7 @@ export class QuoteBlock extends ContainerBlock {
   }
 
   render(context: RenderContext): string {
-    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+    const newLine = context.renderOptions.vanillaHTML ? '\n' : ''
     return `<blockquote>${this.renderChildren(context)}</blockquote>${newLine}`
   }
 }
@@ -252,7 +252,7 @@ export class ListItemBlock extends ContainerBlock {
   }
 
   render(context: RenderContext): string {
-    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+    const newLine = context.renderOptions.vanillaHTML ? '\n' : ''
     const checkboxStr = this.isCheckbox ? `<input type='checkbox' ${this.isChecked ? 'checked' : ''}/>` : ''
     return `<li>${checkboxStr}${this.renderChildren(context)}</li>${newLine}`
   }
@@ -334,7 +334,7 @@ export class ListBlock extends ContainerBlock {
   }
 
   render(context: RenderContext): string {
-    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+    const newLine = context.renderOptions.vanillaHTML ? '\n' : ''
     if (this.isOrdered) {
       const startStr = this.startNumber !== 1 ? ` start='${this.startNumber}' ` : ''
       return `<ol${startStr}>${newLine}${this.renderChildren(context)}${newLine}</ol>${newLine}`
@@ -357,7 +357,7 @@ export class FootnotesAreaBlock extends ContainerBlock {
 
   render(context: RenderContext): string {
     if (this.children.length === 0) return ''
-    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+    const newLine = context.renderOptions.vanillaHTML ? '\n' : ''
     context.stage = 'footnote'
     let html = this.children.map(c => {
       context.parent = this

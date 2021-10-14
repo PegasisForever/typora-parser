@@ -44,7 +44,7 @@ export class ParagraphBlock extends Block {
     if (context.parent instanceof ListItemBlock && !context.parent.isLoose) {
       return this.renderChildren(context)
     } else {
-      const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+      const newLine = context.renderOptions.vanillaHTML ? '\n' : ''
       if (this.lines.length === 0 || (this.lines.length === 1 && this.lines[0] === '')) {
         return `<p>&nbsp;</p>${newLine}`
       } else {
@@ -85,7 +85,7 @@ export class DividerBlock extends Block {
   }
 
   render(context: RenderContext): string {
-    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+    const newLine = context.renderOptions.vanillaHTML ? '\n' : ''
     return `<hr />${newLine}`
   }
 }
@@ -142,13 +142,13 @@ export class HeadingBlock extends Block {
   }
 
   render(context: RenderContext): string {
-    if (context.parent instanceof TOCBlock && !context.renderOption.vanillaHTML) {
+    if (context.parent instanceof TOCBlock && !context.renderOptions.vanillaHTML) {
       let html = this.renderChildren(context)
       html = `<a class="md-toc-inner" href="#${this.id}">${html}</a>`
       html = `<span role="listitem" class="md-toc-item md-toc-h${this.level}">${html}</span>`
       return html
     } else {
-      const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+      const newLine = context.renderOptions.vanillaHTML ? '\n' : ''
       return `<h${this.level} id='${this.id}'>${this.renderChildren(context)}</h${this.level}>${newLine}`
     }
   }
@@ -208,7 +208,7 @@ export class FencedCodeBlock extends Block {
 
   render(context: RenderContext): string {
     context.parent = this
-    return context.renderOption.codeRenderer.render(this.renderChildren(), this.infoString === '' ? undefined : this.infoString, context)
+    return context.renderOptions.codeRenderer.render(this.renderChildren(), this.infoString === '' ? undefined : this.infoString, context)
   }
 }
 
@@ -255,9 +255,9 @@ export class MathBlock extends Block {
   }
 
   render(context: RenderContext): string {
-    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+    const newLine = context.renderOptions.vanillaHTML ? '\n' : ''
     context.parent = this
-    return context.renderOption.latexRenderer.render(this.lines.join('\n'), context) + newLine
+    return context.renderOptions.latexRenderer.render(this.lines.join('\n'), context) + newLine
   }
 }
 
@@ -373,7 +373,7 @@ export class TableBlock extends Block {
   }
 
   render(context: RenderContext): string {
-    const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+    const newLine = context.renderOptions.vanillaHTML ? '\n' : ''
     const titleStr = `<thead>${newLine}${this.renderRow(0, context)}</thead>${newLine}`
     let bodyStr = ''
     for (let i = 1; i < this.rows.length; i++) {
@@ -520,7 +520,7 @@ export namespace HTMLBlock {
     }
 
     render(context: RenderContext): string {
-      const newLine = context.renderOption.vanillaHTML ? '\n' : ''
+      const newLine = context.renderOptions.vanillaHTML ? '\n' : ''
       return this.lines.join('\n') + newLine
     }
   }
@@ -647,7 +647,7 @@ export class TOCBlock extends Block {
   }
 
   render(context: RenderContext): string {
-    if (context.renderOption.vanillaHTML) {
+    if (context.renderOptions.vanillaHTML) {
       return '<div>[TOC]</div>\n'
     } else {
       let html = context.tocEntries.map(heading => {

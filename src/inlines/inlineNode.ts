@@ -42,7 +42,7 @@ export class TextNode extends InlineNode {
   }
 
   render(context: RenderContext): string {
-    if (context.renderOption.vanillaHTML) {
+    if (context.renderOptions.vanillaHTML) {
       return EscapeUtils.escapeHtml(this.text)
     } else {
       return `<span>${EscapeUtils.escapeHtml(this.text)}</span>`
@@ -177,7 +177,7 @@ export class MathNode extends InlineNode {
 
   render(context: RenderContext): string {
     context.parent = this
-    return context.renderOption.latexRenderer.render(this.text, context)
+    return context.renderOptions.latexRenderer.render(this.text, context)
   }
 }
 
@@ -220,7 +220,7 @@ export class AutolinkNode extends InlineNode {
   }
 
   render(context: RenderContext): string {
-    return `<a href='${context.renderOption.urlResolver.resolve(this.text, this.isEmail ? 'email' : 'link')}' target='_blank' class='url'>${EscapeUtils.escapeHtml(this.text)}</a>`
+    return `<a href='${context.renderOptions.urlResolver.resolve(this.text, this.isEmail ? 'email' : 'link')}' target='_blank' class='url'>${EscapeUtils.escapeHtml(this.text)}</a>`
   }
 }
 
@@ -748,13 +748,13 @@ namespace LinkNode {
       }
 
       if (this.linkTextNode.isImage) {
-        const srcText = ` src="${context.renderOption.urlResolver.resolve(url, 'link')}"`
+        const srcText = ` src="${context.renderOptions.urlResolver.resolve(url, 'link')}"`
         const altText = this.linkTextNode.text ? ` alt="${EscapeUtils.escapeHtml(this.linkTextNode.text)}"` : ''
         const titleText = title ? ` title="${EscapeUtils.escapeHtml(title)}"` : ''
 
         return `<img${srcText} referrerpolicy="no-referrer"${altText}${titleText}>`
       } else {
-        const hrefText = ` href='${context.renderOption.urlResolver.resolve(url, 'image')}'`
+        const hrefText = ` href='${context.renderOptions.urlResolver.resolve(url, 'image')}'`
         const titleText = title ? ` title='${EscapeUtils.escapeHtml(title)}'` : ''
 
         return `<a${hrefText}${titleText}>${this.linkTextNode.render(context)}</a>`

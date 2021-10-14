@@ -17,7 +17,7 @@ export interface UrlResolver {
   resolve: (url: string, type: UrlType) => string,
 }
 
-export type RenderOption = {
+export type RenderOptions = {
   vanillaHTML: boolean,     // true -> no typora-specific classes, typora export HTML (without styles)
   includeHead: boolean,     // true -> include head and body tag
   title: string | null,     // only used when includeHead = true
@@ -27,7 +27,7 @@ export type RenderOption = {
   urlResolver: UrlResolver,
 }
 
-export const defaultRenderOption = (): RenderOption => ({
+export const getDefaultRenderOptions = (): RenderOptions => ({
   vanillaHTML: false,
   includeHead: false,
   title: null,

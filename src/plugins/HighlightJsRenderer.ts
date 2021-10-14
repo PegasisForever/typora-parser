@@ -1,8 +1,10 @@
 import hljs from 'highlight.js'
-import {CodeRenderer} from '../RenderOption'
+import {CodeRenderer} from '../RenderOptions'
 import {EscapeUtils, replaceAll} from '../utils'
 import {RenderContext} from '../parser'
 import {fakeCodeMirrorTagGenerator} from './fakeCodeMirrorTagGenerator'
+
+type OptionsType = ReturnType<typeof HighlightJsRenderer.getDefaultOptions>
 
 export default class HighlightJsRenderer implements CodeRenderer {
   private static readonly classMap = {
@@ -47,14 +49,20 @@ export default class HighlightJsRenderer implements CodeRenderer {
     'hljs-punctuation': '',
     'hljs-tag': 'cm-tag',
   }
+  public static readonly getDefaultOptions = () => ({
+    displayLineNumbers: false,
+  })
+
+  private options: OptionsType
 
   constructor(
-    public displayLineNumbers = false,
+    options?: Partial<OptionsType>,
   ) {
+    this.options = Object.assign(HighlightJsRenderer.getDefaultOptions(), options)
   }
 
   render(code: string, language: string | undefined, context: RenderContext): string {
-    if (context.renderOption.vanillaHTML) {
+    if (context.renderOptions.vanillaHTML) {
       return `<pre><code>${EscapeUtils.escapeHtml(code)}\n</code></pre>\n`
     } else {
       const html = hljs.highlight(code, {language}).value
@@ -64,7 +72,7 @@ export default class HighlightJsRenderer implements CodeRenderer {
         }
         return line
       })
-      return fakeCodeMirrorTagGenerator(lines, this.displayLineNumbers)
+      return fakeCodeMirrorTagGenerator(lines, this.options.displayLineNumbers)
     }
   }
 }
