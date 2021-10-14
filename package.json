@@ -12,7 +12,7 @@
     "watch": "tsc --watch",
     "build": "tsc",
     "dev": "node --enable-source-maps build/src/devmain.js",
-    "dev-typora-export": "node --enable-source-maps build/bin/typoraExport.js"
+    "typora-export": "node --enable-source-maps build/bin/typoraExport.js"
   },
   "devDependencies": {
     "@types/codemirror": "^5.60.5",

@@ -262,7 +262,7 @@ export class RawHTMLNode extends InlineNode {
   }
 
   render(): string {
-    return EscapeUtils.escapeHtml(this.text)
+    return this.text
   }
 }
 

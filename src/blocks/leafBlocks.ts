@@ -366,7 +366,9 @@ export class TableBlock extends Block {
 
     return `<tr>${this.rowsNodes[i].map((node, i) => {
       context.parent = this
-      return `<${tag}${getAlignStyle(this.columnAlign[i])}>${node.render(context)}</${tag}>`
+      let html = node.render(context)
+      if (html === '') html = '&nbsp;'
+      return `<${tag}${getAlignStyle(this.columnAlign[i])}>${html}</${tag}>`
     }).join('')}</tr>`
   }
 

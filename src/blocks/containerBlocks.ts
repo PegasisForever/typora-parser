@@ -150,8 +150,8 @@ export class QuoteBlock extends ContainerBlock {
 export type ListMarkerType = '-' | '+' | '*' | '.' | ')'
 
 export class ListItemBlock extends ContainerBlock {
-  private static readonly unorderedMarkerRegex = /^([-+*]) (\[([ x])] )?/
-  private static readonly orderedMarkerRegex = /^(\d{1,9})([.)]) /
+  private static readonly unorderedMarkerRegex = /^ *([-+*]) (\[([ x])] )?/
+  private static readonly orderedMarkerRegex = /^ *(\d{1,9})([.)]) /
 
   private _indent = 0
   set indent(value: number) {
@@ -211,7 +211,7 @@ export class ListItemBlock extends ContainerBlock {
       }
     } else if ((matchResult = lines[0].match(this.unorderedMarkerRegex))) {
       const listItem = new ListItemBlock()
-      listItem.indent = 2
+      listItem.indent = matchResult[0].length
       listItem.isOrdered = false
       listItem.lines.push(lines[0].substring(matchResult[0].length))
       listItem.listMarkerType = matchResult[1]
