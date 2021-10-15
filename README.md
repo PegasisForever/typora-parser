@@ -180,3 +180,5 @@
 ## Bug Report
 
 When reporting a bug, please make sure your markdown can be created only using Typora's WYSIWYG interface (no raw markdown editing). 
+
+## [Contributing](contributing.md)
