@@ -1,13 +1,17 @@
 {
   "name": "typora-parser",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "./build/src/index.js",
   "types": "./build/src/index.d.ts",
   "bin": {
     "typora-export": "./build/bin/typoraExport.js"
   },
   "author": "pegasis",
-  "repository": "github:PegasisForever/typora-parser",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PegasisForever/typora-parse.git"
+  },
+  "homepage": "https://github.com/PegasisForever/typora-parser#readme",
   "license": "MIT",
   "scripts": {
     "watch": "tsc --watch",
