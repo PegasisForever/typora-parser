@@ -7,11 +7,13 @@
   </p>
 </div>
 
-<div style="display: flex;">
-  <h2>⚠️</h2>
-  <h2>This package does not sanitize the output HTML, Please use a sanitize library like <a href="https://github.com/cure53/DOMPurify">DOMPurify</a>!</h2>
-  <h2>⚠️</h2>
-</div>
+<table>
+  <tr>
+    <th><h3>⚠️</h3></th>
+    <th><h3>This package does not sanitize the output HTML, Please use a sanitize library like <a href="https://github.com/cure53/DOMPurify">DOMPurify</a>!</h3></th>
+    <th><h3>⚠️</h3></th>
+  </tr>
+</table>
 
 ## CLI Usage
 
@@ -141,10 +143,11 @@
    ```
 
 
-## Feature Status / TODO
+## Feature Status
 
 - [x] Standard markdown stuff you'd expect
 - [x] Footnotes
+- [x] Checkbox list
 - [x] Math block and inline math (LaTeX)
   - [x] Auto numbering
   - [ ] Chemical equations
@@ -162,6 +165,11 @@
   - [ ] Flowcharts
   - [ ] Mermaid
 
+## TODO
+
+- Complete features
+- More, proper tests
+
 ## Known Differences
 
 - Typora and this package don't parse emphasis the same way as spec. There may be slight differences when parsing emphasis between this package and Typora. When in doubt, use escape.
@@ -171,4 +179,4 @@
 
 ## Bug Report
 
-When reporting a bug, make sure your markdown can be created only using Typora's WYSIWYG interface (no raw markdown editing). 
+When reporting a bug, please make sure your markdown can be created only using Typora's WYSIWYG interface (no raw markdown editing). 
