@@ -218,6 +218,7 @@ export class ListItemBlock extends ContainerBlock {
       if (matchResult[2]) {
         listItem.isCheckbox = true
         listItem.isChecked = matchResult[3] === 'x'
+        listItem.indent -= 4
       }
       return {
         block: listItem,
@@ -254,7 +255,8 @@ export class ListItemBlock extends ContainerBlock {
   render(context: RenderContext): string {
     const newLine = context.renderOptions.vanillaHTML ? '\n' : ''
     const checkboxStr = this.isCheckbox ? `<input type='checkbox' ${this.isChecked ? 'checked' : ''}/>` : ''
-    return `<li>${checkboxStr}${this.renderChildren(context)}</li>${newLine}`
+    const classStr = this.isCheckbox ? ' class="md-task-list-item task-list-item task-list-done"' : ''
+    return `<li${classStr}>${checkboxStr}${this.renderChildren(context)}</li>${newLine}`
   }
 }
 
