@@ -10,7 +10,7 @@
 <table>
   <tr>
     <th><h3>⚠️</h3></th>
-    <th><h3>This package does not sanitize the output HTML, Please use a sanitize library like <a href="https://github.com/cure53/DOMPurify">DOMPurify</a>!</h3></th>
+    <th><h3>This package does not sanitize the output HTML, please use a sanitize library like <a href="https://github.com/cure53/DOMPurify">DOMPurify</a>!</h3></th>
     <th><h3>⚠️</h3></th>
   </tr>
 </table>
