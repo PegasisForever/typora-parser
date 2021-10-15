@@ -1,18 +1,20 @@
 {
   "name": "typora-parser",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "./build/src/index.js",
   "types": "./build/src/index.d.ts",
   "bin": {
     "typora-export": "./build/bin/typoraExport.js"
   },
   "author": "pegasis",
+  "repository": "https://github.com/PegasisForever/typora-parser",
   "license": "MIT",
   "scripts": {
     "watch": "tsc --watch",
     "build": "tsc",
     "dev": "node --enable-source-maps build/src/devmain.js",
-    "typora-export": "node --enable-source-maps build/bin/typoraExport.js"
+    "typora-export": "node --enable-source-maps build/bin/typoraExport.js",
+    "prepublish": "rm -r ./build && tsc"
   },
   "devDependencies": {
     "@types/codemirror": "^5.60.5",

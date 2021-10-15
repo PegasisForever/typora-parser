@@ -2,7 +2,7 @@
   <h1>Typora Parser</h1>
   <p>Convert Typora flavoured markdown to HTML.<br/>This package aims to have the exact same output as Typora, with more options for advanced usage.</p>
   <p>
-    <img src="https://img.shields.io/npm/v/typora-parser?style=for-the-badge"/>
+    <a href="https://www.npmjs.com/package/typora-parser"><img src="https://img.shields.io/npm/v/typora-parser?style=for-the-badge"/></a>
     <a href="https://github.com/PegasisForever/typora-parser/blob/master/LICENSE"><img src="https://img.shields.io/github/license/PegasisForever/typora-parser?style=for-the-badge"></a>
   </p>
 </div>
@@ -24,7 +24,7 @@
    # or any other package manager of your choice
    ```
 
-2. (Optional) Extract CSS from your local Typora installation.
+2. (Optional) [Extract CSS from your local Typora installation](https://github.com/PegasisForever/typora-parser/wiki/Extract-CSS-from-your-local-Typora-installation).
 
 3. ```
    $ typora-export -h
@@ -62,7 +62,7 @@
    # or any other package manager of your choice
    ```
 
-2. (Optional) Extract CSS from your local Typora installation.
+2. (Optional) [Extract CSS from your local Typora installation](https://github.com/PegasisForever/typora-parser/wiki/Extract-CSS-from-your-local-Typora-installation).
 
 3. Import, due to bundle size considerations, this package is separated in to many components.
 
