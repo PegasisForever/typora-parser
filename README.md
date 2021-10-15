@@ -92,6 +92,12 @@
 5. Render to HTML, at this step you can specify [render options](src/RenderOptions.ts).
 
    ```javascript
+   import HighlightJsRenderer from 'typora-parser/build/src/plugins/HighlightJsRenderer'
+   import StubCodeRenderer from 'typora-parser/build/src/plugins/StubCodeRenderer'
+   import MathJaxRenderer from 'typora-parser/build/src/plugins/MathJaxRenderer'
+   import StubLatexRenderer from 'typora-parser/build/src/plugins/StubLatexRenderer'
+   import SimpleUrlResolver from 'typora-parser/build/src/plugins/SimpleUrlResolver'
+   
    // use default options (no latex rendering, no code highlighting)
    const html = parseResult.renderHTML()
    
