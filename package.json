@@ -1,13 +1,13 @@
 {
   "name": "typora-parser",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "./build/src/index.js",
   "types": "./build/src/index.d.ts",
   "bin": {
     "typora-export": "./build/bin/typoraExport.js"
   },
   "author": "pegasis",
-  "repository": "https://github.com/PegasisForever/typora-parser",
+  "repository": "github:PegasisForever/typora-parser",
   "license": "MIT",
   "scripts": {
     "watch": "tsc --watch",
