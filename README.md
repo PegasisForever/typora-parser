@@ -3,7 +3,7 @@
   <p>Convert Typora flavoured markdown to HTML.<br/>This package aims to have the exact same output as Typora, with more options for advanced usage.</p>
   <p>
     <img src="https://img.shields.io/npm/v/typora-parser?style=for-the-badge"/>
-    <img src="https://img.shields.io/github/license/PegasisForever/typora-parser?style=for-the-badge">
+    <a href="https://github.com/PegasisForever/typora-parser/blob/master/LICENSE"><img src="https://img.shields.io/github/license/PegasisForever/typora-parser?style=for-the-badge"></a>
   </p>
 </div>
 
@@ -77,7 +77,7 @@
    import MathJaxRenderer from 'typora-parser/build/src/plugins/MathJaxRenderer'
    ```
 
-4. Parse markdown, at this step you can alter the abstract syntax tree and read [front matter](https://support.typora.io/YAML/) information. [code]()
+4. Parse markdown, at this step you can alter the abstract syntax tree and read [front matter](https://support.typora.io/YAML/) information. [code](src/parser.ts#L36)
 
    ```javascript
    const parseResult = TyporaParser.parse(md)
@@ -89,7 +89,7 @@
    console.log(inspect(parseResult.ast, false, null, true))
    ```
 
-5. Render to HTML, at this step you can specify [render options]().
+5. Render to HTML, at this step you can specify [render options](src/RenderOptions.ts).
 
    ```javascript
    // use default options (no latex rendering, no code highlighting)
@@ -149,9 +149,9 @@
 - [x] Footnotes
 - [x] Checkbox list
 - [x] Math block and inline math (LaTeX)
-  - [x] Auto numbering
-  - [ ] Chemical equations
-  - [ ] Extra tex packages
+    - [x] Auto numbering
+    - [ ] Chemical equations
+    - [ ] Extra tex packages
 - [x] [YAML front matter](https://support.typora.io/YAML/)
 - [x] Table of contents
 - [x] Fenced code highlighting
@@ -161,9 +161,9 @@
 - [x] Superscript
 - [x] Allow empty paragraphs
 - [ ] Diagrams
-  - [ ] Sequence Diagrams
-  - [ ] Flowcharts
-  - [ ] Mermaid
+    - [ ] Sequence Diagrams
+    - [ ] Flowcharts
+    - [ ] Mermaid
 
 ## TODO
 
