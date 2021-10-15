@@ -20,15 +20,16 @@ type OptionsType = {
 
 new Command()
   .version(version)
+  .name('typora-export')
   .argument('<file>', 'input markdown filename')
   .requiredOption('-o, --output <file>', 'output file name')
   .option('-n, --vanilla-html', 'no typora-specific classes, corresponds to typora "export HTML (without styles)"')
   .option('-e, --exclude-head', 'don\'t include head and body tag')
-  .option('-t, --title <title>', 'title of the html, no effect when --exclude-head, defaults to file name without extension')
+  .option('-t, --title <title>', 'title of the html page, no effect when --exclude-head, defaults to file name without extension')
   .option('-g, --extra-head-tags <file>', 'extra tags add to the head tag, no effect when --exclude-head')
-  .option('-l, --code-display-line-numbers', 'show line numbers on code block, no effect when --vanilla-html')
+  .option('-l, --code-display-line-numbers', 'display line numbers on code block, no effect when --vanilla-html')
   .option('-b, --math-auto-numbering', 'auto numbering math blocks')
-  .option('-k, --math-dont-apply-line-breaks', 'don\'t apply line break at \\\\ and \\newline in math block, see https://support.typora.io/Math/#line-breaking')
+  .option('-k, --math-dont-apply-line-breaks', 'don\'t apply line breaks at \\\\ and \\newline in math block, see https://support.typora.io/Math/#line-breaking')
   .action(async (inputFileName, options: OptionsType) => {
     const parseResult = TyporaParser.parse(await fs.readFile(inputFileName, {encoding: 'utf8'}))
     const html = parseResult.renderHTML({

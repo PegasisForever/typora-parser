@@ -18,12 +18,12 @@ export interface UrlResolver {
 }
 
 export type RenderOptions = {
-  vanillaHTML: boolean,     // true -> no typora-specific classes, typora export HTML (without styles)
+  vanillaHTML: boolean,     // true -> no typora-specific classes, corresponds to typora "export HTML (without styles)"
   includeHead: boolean,     // true -> include head and body tag
-  title: string | null,     // only used when includeHead = true
-  extraHeadTags: string | null,         // only used when includeHead = true
-  codeRenderer: CodeRenderer,           // only used when vanillaHTML = false
-  latexRenderer: LatexRenderer,         // only used when vanillaHTML = false
+  title: string | null,     // title of the html page, only used when includeHead = true
+  extraHeadTags: string | null,         // extra tags add to the head tag, only used when includeHead = true
+  codeRenderer: CodeRenderer,
+  latexRenderer: LatexRenderer,
   urlResolver: UrlResolver,
 }
 

@@ -16,10 +16,9 @@ console.assert = function (condition, msg) {
   console.log(inspect(parseResult.linkReferences, false, null, true))
   console.log(inspect(parseResult.tocEntries, false, null, true))
   const html = parseResult.renderHTML({
-    vanillaHTML: false,
     includeHead: true,
     latexRenderer: new MathJaxRenderer(),
-    codeRenderer: new HighlightJsRenderer({displayLineNumbers: true}),
+    codeRenderer: new HighlightJsRenderer({displayLineNumbers: false}),
     extraHeadTags: await fs.readFile('extraHeadTags.txt', {encoding: 'utf8'}),
   })
   // console.log(html)
