@@ -15,6 +15,8 @@
   </tr>
 </table>
 
+> This parser is not CommonMark spec compliant (nor does Typora), see discussion [#2](https://github.com/PegasisForever/typora-parser/discussions/2).
+
 ## CLI Usage
 
 1. Install.
